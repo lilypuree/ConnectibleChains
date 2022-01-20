@@ -1,15 +1,14 @@
 package com.lilypuree.connectiblechains.network;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.network.NetworkDirection;
-import net.minecraftforge.fml.network.NetworkRegistry;
-import net.minecraftforge.fml.network.simple.SimpleChannel;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 public class ModPacketHandler {
 
-    private static SimpleChannel INSTANCE;
+    public static SimpleChannel INSTANCE;
+    private static final String PROTOCOL_VERSION = "1";
     private static int ID = 0;
 
     private static int nextID() {
@@ -19,9 +18,9 @@ public class ModPacketHandler {
 
     public static void registerMessages() {
         INSTANCE = NetworkRegistry.newSimpleChannel(new ResourceLocation(ConnectibleChains.MODID, "main"),
-                () -> "1.0",
-                s -> true,
-                s -> true);
+                () -> PROTOCOL_VERSION,
+                PROTOCOL_VERSION::equals,
+                PROTOCOL_VERSION::equals);
 
         INSTANCE.messageBuilder(S2CChainAttachPacket.class, nextID())
                 .encoder(S2CChainAttachPacket::toBytes)
@@ -41,19 +40,5 @@ public class ModPacketHandler {
                 .consumer(S2CMultiChainAttachPacket::handle)
                 .add();
 
-        INSTANCE.messageBuilder(S2CMultiChainDetachPacket.class, nextID())
-                .encoder(S2CMultiChainDetachPacket::toBytes)
-                .decoder(S2CMultiChainDetachPacket::new)
-                .consumer(S2CMultiChainDetachPacket::handle)
-                .add();
     }
-
-    public static void sendToClient(Object packet, ServerPlayerEntity player) {
-        INSTANCE.sendTo(packet, player.connection.connection, NetworkDirection.PLAY_TO_CLIENT);
-    }
-
-    public static void sendToServer(Object packet) {
-        INSTANCE.sendToServer(packet);
-    }
-
 }

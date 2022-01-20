@@ -1,14 +1,10 @@
 {
   "required": true,
   "package": "com.lilypuree.connectiblechains.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_17",
   "refmap": "connectiblechains.refmap.json",
   "mixins": [
-    "server.network.TrackedEntityMixin",
-    "server.world.ChunkManagerMixin"
-  ],
-  "client":[
-    "network.ClientPlayNetHandlerMixin"
+    "server.world.ChunkMapMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -3,10 +3,10 @@ package com.lilypuree.connectiblechains.network;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
@@ -16,13 +16,17 @@ public class S2CChainDetachPacket {
 
     public static ResourceLocation S2C_CHAIN_DETACH_PACKET_ID = new ResourceLocation(ConnectibleChains.MODID, "s2c_chain_detach_packet_id");
 
-    public S2CChainDetachPacket(PacketBuffer buf) {
-        fromTo = buf.readVarIntArray();
-            }
+    public S2CChainDetachPacket(int[] fromTo) {
+        this.fromTo = fromTo;
+    }
 
-    public void toBytes(PacketBuffer buf) {
+    public S2CChainDetachPacket(FriendlyByteBuf buf) {
+        fromTo = buf.readVarIntArray();
+    }
+
+    public void toBytes(FriendlyByteBuf buf) {
         buf.writeVarIntArray(fromTo);
-            }
+    }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {

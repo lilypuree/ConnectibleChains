@@ -1,18 +1,18 @@
 /*
- *     Copyright (C) 2020 legoatoom
+ * Copyright (C) 2022 legoatoom
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 package com.lilypuree.connectiblechains.client.render.entity;
@@ -20,317 +20,201 @@ package com.lilypuree.connectiblechains.client.render.entity;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.client.render.entity.model.ChainKnotEntityModel;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.LightTexture;
+import com.lilypuree.connectiblechains.client.ClientEventHandler;
+import com.lilypuree.connectiblechains.util.Helper;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Matrix4f;
+import com.mojang.math.Quaternion;
+import com.mojang.math.Vector3f;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.culling.ClippingHelper;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.HangingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Matrix4f;
-import net.minecraft.world.LightType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
+/**
+ * <p>This class renders the chain you see in game. The block around the fence and the chain.
+ * You could use this code to start to understand how this is done.
+ * I tried to make it as easy to understand as possible, mainly for myself, since the MobEntityRenderer has a lot of
+ * unclear code and shortcuts made.</p>
+ *
+ * <p>Following is the formula used. h is the height difference, d is the distance and α is a scaling factor</p>
+ *
+ * <img src="./doc-files/formula.png">
+ *
+ * @author legoatoom
+ * @see net.minecraft.client.renderer.entity.LeashKnotRenderer
+ * @see net.minecraft.client.renderer.entity.MobRenderer
+ */
 @OnlyIn(Dist.CLIENT)
 public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(ConnectibleChains.MODID, "textures/entity/chain_knot.png");
-    private final ChainKnotEntityModel<ChainKnotEntity> model = new ChainKnotEntityModel<>();
+    private static final ResourceLocation KNOT_TEXTURE = Helper.identifier("textures/entity/chain_knot.png");
+    private static final ResourceLocation CHAIN_TEXTURE = new ResourceLocation("textures/block/chain.png");
+    private final ChainKnotEntityModel<ChainKnotEntity> model;
+    private final ChainRenderer chainRenderer = new ChainRenderer();
 
-    public ChainKnotEntityRenderer(EntityRendererManager rendererManager) {
-        super(rendererManager);
+    public ChainKnotEntityRenderer(EntityRendererProvider.Context context) {
+        super(context);
+        this.model = new ChainKnotEntityModel<>(context.bakeLayer(ClientEventHandler.CHAIN_KNOT));
     }
 
     @Override
-    public void render(ChainKnotEntity chainKnotEntity, float f, float g, MatrixStack matrixStack, IRenderTypeBuffer renderTypeBuffer, int i) {
-        super.render(chainKnotEntity, f, g, matrixStack, renderTypeBuffer, i);
-        matrixStack.pushPose();
-        matrixStack.scale(-0.9F, -0.9F, 0.9F);
+    public boolean shouldRender(ChainKnotEntity entity, Frustum frustum, double x, double y, double z) {
+        boolean should = entity.getHoldingEntities().stream().anyMatch(entity1 -> {
+            if (entity1 instanceof ChainKnotEntity) {
+                if (!entity1.shouldRender(x, y, z)) {
+                    return false;
+                } else if (entity1.noCulling) {
+                    return true;
+                } else {
+                    AABB box = entity1.getBoundingBoxForCulling().inflate(entity.distanceTo(entity1) / 2D);
+                    if (box.hasNaN() || box.getSize() == 0.0D) {
+                        box = new AABB(entity1.getX() - 2.0D, entity1.getY() - 2.0D, entity1.getZ() - 2.0D, entity1.getX() + 2.0D, entity1.getY() + 2.0D, entity1.getZ() + 2.0D);
+                    }
+
+                    return frustum.isVisible(box);
+                }
+            } else return entity1 instanceof Player;
+        });
+        return super.shouldRender(entity, frustum, x, y, z) || should;
+    }
+
+    @Override
+    public ResourceLocation getTextureLocation(ChainKnotEntity pEntity) {
+        return KNOT_TEXTURE;
+    }
+
+    @Override
+    public void render(ChainKnotEntity chainKnotEntity, float yaw, float partialTicks, PoseStack matrices, MultiBufferSource vertexConsumers, int light) {
+        matrices.pushPose();
+        Vec3 leashOffset = chainKnotEntity.getRopeHoldPosition(partialTicks).subtract(chainKnotEntity.getPosition(partialTicks));
+        matrices.translate(leashOffset.x, leashOffset.y + 6.5 / 16f, leashOffset.z);
+        matrices.scale(5 / 6f, 1, 5 / 6f);
         this.model.setupAnim(chainKnotEntity, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F);
-        IVertexBuilder vertexConsumer = renderTypeBuffer.getBuffer(this.model.renderType(TEXTURE));
-        this.model.renderToBuffer(matrixStack, vertexConsumer, i, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
-        matrixStack.popPose();
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(KNOT_TEXTURE));
+        this.model.renderToBuffer(matrices, vertexConsumer, light, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        matrices.popPose();
         ArrayList<Entity> entities = chainKnotEntity.getHoldingEntities();
         for (Entity entity : entities) {
-            this.createChainLine(chainKnotEntity, g, matrixStack, renderTypeBuffer, entity);
+            this.createChainLine(chainKnotEntity, partialTicks, matrices, vertexConsumers, entity);
+            if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
+                this.drawDebugVector(matrices, chainKnotEntity, entity, vertexConsumers.getBuffer(RenderType.LINES));
+            }
         }
+        if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
+            matrices.pushPose();
+            // F stands for "from"
+            Component holdingCount = new TextComponent("F: " + chainKnotEntity.getHoldingEntities().size());
+            matrices.translate(0, 0.25, 0);
+            this.renderNameTag(chainKnotEntity, holdingCount, matrices, vertexConsumers, light);
+            matrices.popPose();
+        }
+        super.render(chainKnotEntity, yaw, partialTicks, matrices, vertexConsumers, light);
     }
 
-    @Override
-    public boolean shouldRender(ChainKnotEntity entity, ClippingHelper clippingHelper, double x, double y, double z) {
-        boolean should = entity.getHoldingEntities().stream().anyMatch(entity1 -> {
-            if (entity1 instanceof ChainKnotEntity)
-                return super.shouldRender((ChainKnotEntity) entity1, clippingHelper, x, y, z);
-            else return entity1 instanceof PlayerEntity;
-        });
-        return super.shouldRender(entity, clippingHelper, x, y, z) || should;
+    /**
+     * Draws a line fromEntity - toEntity, from green to red.
+     */
+    private void drawDebugVector(PoseStack matrices, Entity fromEntity, Entity toEntity, VertexConsumer buffer) {
+        if (toEntity == null) return;
+        Matrix4f modelMat = matrices.last().pose();
+        Vec3 vec = toEntity.position().subtract(fromEntity.position());
+        Vec3 normal = vec.normalize();
+        buffer.vertex(modelMat, 0, 0, 0)
+                .color(0, 255, 0, 255)
+                .normal((float) normal.x, (float) normal.y, (float) normal.z).endVertex();
+        buffer.vertex(modelMat, (float) vec.x, (float) vec.y, (float) vec.z)
+                .color(255, 0, 0, 255)
+                .normal((float) normal.x, (float) normal.y, (float) normal.z).endVertex();
     }
 
-    @Override
-    public ResourceLocation getTextureLocation(ChainKnotEntity entity) {
-        return TEXTURE;
-    }
+    /**
+     * If I am honest I do not really know what is happening here most of the time, most of the code was 'inspired' by
+     * the {@link net.minecraft.client.renderer.entity.LeashKnotRenderer}.
+     * Many variables therefore have simple names. I tried my best to comment and explain what everything does.
+     *
+     * @param fromEntity             The origin Entity
+     * @param tickDelta              Delta tick
+     * @param matrices               The render matrix stack.
+     * @param vertexConsumerProvider The VertexConsumerProvider, whatever it does.
+     * @param toEntity               The entity that we connect the chain to, this can be a {@link Player} or a {@link ChainKnotEntity}.
+     */
+    private void createChainLine(ChainKnotEntity fromEntity, float tickDelta, PoseStack matrices, MultiBufferSource vertexConsumerProvider, Entity toEntity) {
+        if (toEntity == null) return; // toEntity can be null, this will return the function if it is null.
+        matrices.pushPose();
 
-    private void createChainLine(ChainKnotEntity fromEntity, float f, MatrixStack matrixStack, IRenderTypeBuffer renderTypeBuffer, Entity chainOrPlayerEntity) {
-        if (chainOrPlayerEntity == null) return;
+        // Don't have to lerp knot position as it can't move
+        // Also lerping the position of an entity that was just created
+        // causes visual bugs because the position is lerped from 0/0/0.
+        Vec3 srcPos = fromEntity.position().add(fromEntity.getLeashOffset());
+        Vec3 dstPos;
 
-        matrixStack.pushPose();
-        double d = MathHelper.lerp(f * 0.5F, chainOrPlayerEntity.yRot, chainOrPlayerEntity.yRotO) * 0.017453292F;
-        double e = MathHelper.lerp(f * 0.5F, chainOrPlayerEntity.xRot, chainOrPlayerEntity.xRotO) * 0.017453292F;
-        double g = Math.cos(d);
-        double h = Math.sin(d);
-        double i = Math.sin(e);
-        float t;
-        float r;
-        float s;
-        if (chainOrPlayerEntity instanceof HangingEntity) {
-            g = 0.0D;
-            h = 0.0D;
-            double k = MathHelper.lerp(f, chainOrPlayerEntity.xOld, chainOrPlayerEntity.getX());
-            double l = MathHelper.lerp(f, chainOrPlayerEntity.yOld, chainOrPlayerEntity.getY());
-            double m = MathHelper.lerp(f, chainOrPlayerEntity.zOld, chainOrPlayerEntity.getZ());
-            double o = MathHelper.lerp(f, fromEntity.xOld, fromEntity.getX());
-            double p = MathHelper.lerp(f, fromEntity.yOld, fromEntity.getY());
-            double q = MathHelper.lerp(f, fromEntity.zOld, fromEntity.getZ());
-            matrixStack.translate(g, 0.3F, h);
-            r = (float) (k - o);
-            s = (float) (l - p);
-            t = (float) (m - q);
+        if (toEntity instanceof HangingEntity) {
+            dstPos = toEntity.position().add(toEntity.getLeashOffset());
         } else {
-            double j = Math.cos(e);
-            double k = MathHelper.lerp(f, chainOrPlayerEntity.xOld, chainOrPlayerEntity.getX()) - g * 0.7D - h * 0.5D * j;
-            double l = MathHelper.lerp(f, chainOrPlayerEntity.yOld + (double) chainOrPlayerEntity.getEyeHeight() * 0.7D, chainOrPlayerEntity.getY() + (double) chainOrPlayerEntity.getEyeHeight() * 0.7D) - i * 0.5D - 0.5D;
-            double m = MathHelper.lerp(f, chainOrPlayerEntity.zOld, chainOrPlayerEntity.getZ()) - h * 0.7D + g * 0.5D * j;
-            double o = MathHelper.lerp(f, fromEntity.xOld, fromEntity.getX());
-            double p = MathHelper.lerp(f, fromEntity.yOld, fromEntity.getY()) + 0.3F;
-            double q = MathHelper.lerp(f, fromEntity.zOld, fromEntity.getZ());
-            matrixStack.translate(0, 0.3F, 0);
-            r = (float) (k - o);
-            s = (float) (l - p);
-            t = (float) (m - q);
+            dstPos = toEntity.getRopeHoldPosition(tickDelta);
         }
-        IVertexBuilder vertexBuilder = renderTypeBuffer.getBuffer(RenderType.leash());
-        Matrix4f matrix4f = matrixStack.last().pose();
-        //Create offset based on the location. Example that a line that does not travel in the x then the xOffset will be 0.
-        float v = MathHelper.fastInvSqrt(r * r + t * t) * 0.025F / 2.0F;
-        float xOffset = t * v;
-        float zOffset = r * v;
-        BlockPos zzz = new BlockPos(fromEntity.getEyePosition(f));
-        int y = this.getBlockLightLevel(fromEntity, zzz);
-        int z = chainOrPlayerEntity.isOnFire() ? 15 : chainOrPlayerEntity.level.getBrightness(LightType.BLOCK, new BlockPos(chainOrPlayerEntity.getEyePosition(f)));
-        int aa = fromEntity.level.getBrightness(LightType.SKY, zzz);
-        int ab = fromEntity.level.getBrightness(LightType.SKY, new BlockPos(chainOrPlayerEntity.getEyePosition(f)));
-        float distance = chainOrPlayerEntity.distanceTo(fromEntity);
-        lineBuilder(distance, vertexBuilder, matrix4f, r, s, t, y, z, aa, ab, xOffset, zOffset);
-        matrixStack.popPose();
+
+        // The leash pos offset
+        Vec3 leashOffset = fromEntity.getLeashOffset();
+        matrices.translate(leashOffset.x, leashOffset.y, leashOffset.z);
+
+        // Some further performance improvements can be made here:
+        // Create a rendering layer that:
+        // - does not have normals
+        // - does not have an overlay
+        // - does not have vertex color
+        // - uses a tri strp instead of quads
+        VertexConsumer buffer = vertexConsumerProvider.getBuffer(RenderType.entityCutoutNoCull(CHAIN_TEXTURE));
+        if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
+            buffer = vertexConsumerProvider.getBuffer(RenderType.lines());
+        }
+
+        Vector3f offset = Helper.getChainOffset(srcPos, dstPos);
+        matrices.translate(offset.x(), 0, offset.z());
+
+        // Now we gather light information for the chain. Since the chain is lighter if there is more light.
+        BlockPos blockPosOfStart = new BlockPos(fromEntity.getEyePosition(tickDelta));
+        BlockPos blockPosOfEnd = new BlockPos(toEntity.getEyePosition(tickDelta));
+        int blockLightLevelOfStart = fromEntity.level.getBrightness(LightLayer.BLOCK, blockPosOfStart);
+        int blockLightLevelOfEnd = toEntity.level.getBrightness(LightLayer.BLOCK, blockPosOfEnd);
+        int skylightLevelOfStart = fromEntity.level.getBrightness(LightLayer.SKY, blockPosOfStart);
+        int skylightLevelOfEnd = fromEntity.level.getBrightness(LightLayer.SKY, blockPosOfEnd);
+
+        Vec3 startPos = srcPos.add(offset.x(), 0, offset.z());
+        Vec3 endPos = dstPos.add(-offset.x(), 0, -offset.z());
+        Vector3f chainVec = new Vector3f((float) (endPos.x - startPos.x), (float) (endPos.y - startPos.y), (float) (endPos.z - startPos.z));
+
+        float angleY = -(float) Math.atan2(chainVec.z(), chainVec.x());
+        matrices.mulPose(Quaternion.fromXYZ(0, angleY, 0));
+
+        if (toEntity instanceof HangingEntity) {
+            ChainRenderer.BakeKey key = new ChainRenderer.BakeKey(fromEntity.position(), toEntity.position());
+            chainRenderer.renderBaked(buffer, matrices, key, chainVec, blockLightLevelOfStart, blockLightLevelOfEnd, skylightLevelOfStart, skylightLevelOfEnd);
+        } else {
+            chainRenderer.render(buffer, matrices, chainVec, blockLightLevelOfStart, blockLightLevelOfEnd, skylightLevelOfStart, skylightLevelOfEnd);
+        }
+
+        matrices.popPose();
     }
 
-    private static float[] rotator(double x, double y, double z) {
-        double x2 = x * x;
-        double z2 = z * z;
-        double zx = Math.sqrt(x2 + z2);
-        double arc1 = Math.atan2(y, zx);
-        double arc2 = Math.atan2(x, z);
-        double d = Math.sin(arc1) * 0.0125F;
-        float y_new = (float) (Math.cos(arc1) * 0.0125F);
-        float z_new = (float) (Math.cos(arc2) * d);
-        float x_new = (float) (Math.sin(arc2) * d);
-        float v = 0.0F;
-        if (zx == 0.0F) {
-            x_new = z_new;
-            v = 1.0F;
-        }
-        return new float[]{x_new, y_new, z_new, v};
+    public ChainRenderer getChainRenderer() {
+        return chainRenderer;
     }
-
-    private static void lineBuilder(float distance, IVertexBuilder vertexConsumer, Matrix4f matrix4f, float cordX, float cordY, float cordZ, int i, int j, int k, int l, float xOffset, float zOffset) {
-        List<Integer> mPatternA = Arrays.asList(1, 3, 6, 9, 12, 14);
-        List<Integer> stbPatternA = Arrays.asList(1, 12);
-        List<Integer> ltbPatternA = Collections.singletonList(6);
-        List<Integer> stbPatternB = Arrays.asList(0, 14);
-        List<Integer> ltbPatternB = Arrays.asList(3, 9);
-
-        int length = (int) Math.floor(distance * 24);
-        for (int p = 0; p < length; ++p) {
-            float s = (float) l / (length - 1);
-            int t = (int) MathHelper.lerp(s, (float) i, (float) j);
-            int u = (int) MathHelper.lerp(s, (float) k, (float) l);
-            int pack = LightTexture.pack(t, u);
-            if (mPatternA.contains(p % 16)) {
-                middle(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p, false, xOffset, zOffset, false);
-                middle(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1, true, xOffset, zOffset, false);
-                middle(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p, false, xOffset, zOffset, true);
-                middle(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1, true, xOffset, zOffset, true);
-            }
-            if (stbPatternA.contains(p % 16)) {
-                for (int T = 0; T < 3; T++) {
-                    top(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + T, false, xOffset, zOffset, false);
-                    top(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1 + T, true, xOffset, zOffset, false);
-                    bot(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + T, false, xOffset, zOffset, false);
-                    bot(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1 + T, true, xOffset, zOffset, false);
-                }
-            }
-            if (ltbPatternA.contains(p % 16)) {
-                for (int T = 0; T < 4; T++) {
-                    top(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + T, false, xOffset, zOffset, false);
-                    top(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1 + T, true, xOffset, zOffset, false);
-                    bot(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + T, false, xOffset, zOffset, false);
-                    bot(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1 + T, true, xOffset, zOffset, false);
-                }
-            }
-            if (stbPatternB.contains(p % 16)) {
-                for (int T = 0; T < 2; T++) {
-                    top(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + T, false, xOffset, zOffset, true);
-                    top(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1 + T, true, xOffset, zOffset, true);
-                    bot(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + T, false, xOffset, zOffset, true);
-                    bot(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1 + T, true, xOffset, zOffset, true);
-                }
-            }
-            if (ltbPatternB.contains(p % 16)) {
-                for (int T = 0; T < 4; T++) {
-                    top(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + T, false, xOffset, zOffset, true);
-                    top(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1 + T, true, xOffset, zOffset, true);
-                    bot(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + T, false, xOffset, zOffset, true);
-                    bot(length, vertexConsumer, matrix4f, pack, cordX, cordY, cordZ, length, p + 1 + T, true, xOffset, zOffset, true);
-                }
-            }
-        }
-    }
-
-    private static void middle(int V, IVertexBuilder vertexConsumer, Matrix4f matrix4f, int i, float cordX, float cordY,
-                               float cordZ, int l, int step, boolean bl, float n, float o, boolean shift) {
-        double drip = drip(step, V);
-        float s = ((float) step / (float) l);
-        float[] rotate = rotator(cordX, cordY, cordZ);
-        float v1 = 1.0F;
-        if (rotate[3] == 1.0F) {
-            v1 *= -1;
-        }
-        float t = cordX * s;
-        float u = cordY * s;
-        float v = cordZ * s;
-        float x1 = t + (rotate[0]) + n;
-        float y1 = u + (float) 0.0125 - rotate[1];
-        float z1 = v + (rotate[2]) - o;
-        float x2 = t - (rotate[0]) - n;
-        float y2 = u + (float) 0.0125 + rotate[1];
-        float z2 = v - (rotate[2]) + o;
-        float R = 0.12F * 0.7F;
-        float G = 0.12F * 0.7F;
-        float B = 0.17F * 0.7F;
-        if (shift) {
-            R = 0.12F;
-            G = 0.12F;
-            B = 0.17F;
-            x1 = t + (rotate[0] * v1) - n;
-            z1 = v + (rotate[2]) + o;
-            x2 = t - (rotate[0] * v1) + n;
-            z2 = v - (rotate[2]) - o;
-        }
-        y1 += drip;
-        y2 += drip;
-        renderPart(vertexConsumer, matrix4f, i, bl, R, G, B, x1, y1, z1, x2, y2, z2);
-    }
-
-    private static void renderPart(IVertexBuilder vertexConsumer, Matrix4f matrix4f, int i, boolean bl, float R, float G, float B, float x1, float y1, float z1, float x2, float y2, float z2) {
-        if (bl) {
-            vertexConsumer.vertex(matrix4f, x1, y1, z1).color(R, G, B, 1.0F).uv2(i).endVertex();
-        }
-        vertexConsumer.vertex(matrix4f, x2, y2, z2).color(R, G, B, 1.0F).uv2(i).endVertex();
-        if (!bl) {
-            vertexConsumer.vertex(matrix4f, x1, y1, z1).color(R, G, B, 1.0F).uv2(i).endVertex();
-        }
-    }
-
-    private static float drip(int x, float V) {
-        float c = 0.6F;
-        float b = -c / V;
-        float a = c / (V * V);
-        return (a * (x * x) + b * x);
-    }
-
-    private static void top(int V, IVertexBuilder vertexConsumer, Matrix4f matrix4f, int i, float cordX, float cordY,
-                            float cordZ, int l, int step, boolean bl, float n, float o, boolean shift) {
-        double drip = drip(step, V);
-        float s = ((float) step / (float) l);
-        float[] rotate = rotator(cordX, cordY, cordZ);
-        float v1 = 1.0F;
-        if (rotate[3] == 1.0F) {
-            v1 *= -1;
-        }
-        float t = cordX * s;
-        float u = cordY * s;
-        float v = cordZ * s;
-        float x1 = t - (rotate[0]) + n;
-        float y1 = u + (float) 0.0125 + rotate[1];
-        float z1 = v - (rotate[2]) - o;
-        float x2 = t - ((rotate[0]) - n) * 3;
-        float y2 = u + (float) 0.0125 + rotate[1] * 3;
-        float z2 = v - ((rotate[2]) + o) * 3;
-        float R = 0.16F;
-        float G = 0.17F;
-        float B = 0.21F;
-        if (shift) {
-            R *= 0.8F;
-            G *= 0.8F;
-            B *= 0.8F;
-            x1 = t - (rotate[0] * v1) - n;
-            z1 = v - (rotate[2]) + o;
-            x2 = t - ((rotate[0] * v1) + n) * 3;
-            z2 = v - ((rotate[2]) - o) * 3;
-        }
-        y1 += drip;
-        y2 += drip;
-        renderPart(vertexConsumer, matrix4f, i, bl, R, G, B, x1, y1, z1, x2, y2, z2);
-    }
-
-    private static void bot(int V, IVertexBuilder vertexConsumer, Matrix4f matrix4f, int i, float cordX, float cordY,
-                            float cordZ, int l, int step, boolean bl, float n, float o,
-                            boolean shift) {
-        double drip = drip(step, V);
-        float s = ((float) step / (float) l);
-        float[] rotate = rotator(cordX, cordY, cordZ);
-        float v1 = 1.0F;
-        if (rotate[3] == 1.0F) {
-            v1 *= -1;
-        }
-        float t = cordX * s;
-        float u = cordY * s;
-        float v = cordZ * s;
-        float x1 = t + ((rotate[0]) - n) * 3;
-        float y1 = u + (float) 0.0125 - rotate[1] * 3;
-        float z1 = v + ((rotate[2]) + o) * 3;
-        float x2 = t + (rotate[0]) - n;
-        float y2 = u + (float) 0.0125 - rotate[1];
-        float z2 = v + (rotate[2]) + o;
-        float R = 0.16F;
-        float G = 0.17F;
-        float B = 0.21F;
-        if (shift) {
-            R *= 0.8F;
-            G *= 0.8F;
-            B *= 0.8F;
-            x1 = t + ((rotate[0] * v1) + n) * 3;
-            z1 = v + ((rotate[2]) - o) * 3;
-            x2 = t + (rotate[0] * v1) + n;
-            z2 = v + (rotate[2]) - o;
-        }
-        y1 += drip;
-        y2 += drip;
-        renderPart(vertexConsumer, matrix4f, i, bl, R, G, B, x1, y1, z1, x2, y2, z2);
-    }
-
 }

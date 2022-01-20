@@ -3,10 +3,10 @@ package com.lilypuree.connectiblechains.network;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
@@ -17,12 +17,19 @@ public class S2CMultiChainAttachPacket {
 
     public static ResourceLocation S2C_MULTI_CHAIN_ATTACH_PACKET_ID = new ResourceLocation(ConnectibleChains.MODID, "s2c_multi_chain_attach_packet_id");
 
-    public S2CMultiChainAttachPacket(PacketBuffer buf) {
+
+
+    public S2CMultiChainAttachPacket(int from, int[] tos) {
+        this.from = from;
+        this.tos = tos;
+    }
+
+    public S2CMultiChainAttachPacket(FriendlyByteBuf buf) {
         from = buf.readInt();
         tos = buf.readVarIntArray();
     }
 
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         buf.writeInt(from);
         buf.writeVarIntArray(tos);
     }
