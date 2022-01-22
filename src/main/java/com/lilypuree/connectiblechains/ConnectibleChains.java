@@ -42,6 +42,7 @@ public class ConnectibleChains {
 
         runtimeConfig = new CCConfig();
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CCConfig.COMMON_CONFIG);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, CCConfig.CLIENT_CONFIG);
     }
 
     public void setup(FMLCommonSetupEvent event) {
