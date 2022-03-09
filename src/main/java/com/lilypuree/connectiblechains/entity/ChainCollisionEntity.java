@@ -84,10 +84,10 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
             Entity sourceEntity = source.getEntity();
             if (source.getDirectEntity() instanceof AbstractArrow) {
                 return false;
-            } else if (sourceEntity instanceof Player
+            } else if (sourceEntity instanceof Player player
                     && startOwner instanceof ChainKnotEntity && endOwner instanceof ChainKnotEntity) {
-                boolean isCreative = ((Player) sourceEntity).isCreative();
-                if (!((Player) sourceEntity).getMainHandItem().isEmpty() && Tags.Items.SHEARS.contains(((Player) sourceEntity).getMainHandItem().getItem())) {
+                boolean isCreative = player.isCreative();
+                if (!player.getMainHandItem().isEmpty() && player.getMainHandItem().is(Tags.Items.SHEARS)) {
                     ((ChainKnotEntity) startOwner).damageLink(isCreative, (ChainKnotEntity) endOwner);
                 }
             }

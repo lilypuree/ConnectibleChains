@@ -22,21 +22,6 @@ public class CCConfig {
         ForgeConfigSpec.Builder COMMON_BUILDER = new ForgeConfigSpec.Builder();
         ForgeConfigSpec.Builder CLIENT_BUILDER = new ForgeConfigSpec.Builder();
         COMMON_BUILDER.comment("Connectible Chains Config\n\n");
-//        chainHangAmount = COMMON_BUILDER.comment("""
-//                Chain Hang Amount
-//                Effects how much the chain hangs.
-//                Collision will update on new chains or world loading.
-//                Has no effect in multiplayer.
-//                """).defineInRange("chainHangAmount", 9.0f, 0.0f, Double.MAX_VALUE);
-//        maxChainRange = COMMON_BUILDER.comment("""
-//                Max Chain Distance
-//                Warning: Long chains can sometimes become invisible!
-//                Has no effect in multiplayer
-//                """).defineInRange("maxChainRange", 7, 0, 32);
-//        quality = COMMON_BUILDER.comment("""
-//                Chain Quality
-//                Effects the visual quality the chain.
-//                """).defineInRange("quality", 4, 1, 9);
 
         chainHangAmount = COMMON_BUILDER
                 .comment("\r\n Chain Hang Amount\n"

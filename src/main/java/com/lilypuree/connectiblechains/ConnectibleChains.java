@@ -13,6 +13,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.MinecraftForge;
@@ -26,12 +27,14 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(ConnectibleChains.MODID)
 public class ConnectibleChains {
-
     public static final String MODID = "connectiblechains";
+    public static final Logger LOGGER = LogManager.getLogger(MODID);
     public static CCConfig runtimeConfig;
 
     public ConnectibleChains() {
@@ -65,7 +68,7 @@ public class ConnectibleChains {
         if (player == null) return;
         ItemStack stack = player.getItemInHand(hand);
         BlockPos blockPos = hitResult.getBlockPos();
-        Block block = world.getBlockState(blockPos).getBlock();
+        BlockState block = world.getBlockState(blockPos);
         if (stack.getItem() == Items.CHAIN) {
             if (ChainKnotEntity.canConnectTo(block) && !player.isShiftKeyDown()) {
                 if (!world.isClientSide) {
@@ -107,7 +110,7 @@ public class ConnectibleChains {
     private void onBlockBreak(BlockEvent.BreakEvent event) {
         LevelAccessor level = event.getWorld();
         BlockPos pos = event.getPos();
-        if (!level.isClientSide() && ChainKnotEntity.canConnectTo(level.getBlockState(pos).getBlock())) {
+        if (!level.isClientSide() && ChainKnotEntity.canConnectTo(level.getBlockState(pos))) {
             level.getEntitiesOfClass(ChainKnotEntity.class, new AABB(event.getPos())).forEach(ChainKnotEntity::setObstructionCheckCounter);
         }
     }

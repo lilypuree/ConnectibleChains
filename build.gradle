@@ -11,6 +11,11 @@ buildscript {
         classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
     }
 }
+
+plugins{
+    id "com.matthewprenger.cursegradle" version "$cursegradle_version"
+}
+
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
@@ -116,6 +121,24 @@ publishing {
         maven {
             url "file:///${project.projectDir}/mcmodsrepo"
         }
+    }
+}
+
+
+curseforge {
+    apiKey = "$System.env.CURSEFORGEKEY"
+    project {
+        id = projectId
+        releaseType = project.releaseType
+        changelogType = 'markdown'
+        changelog = file('CHANGELOG.md').text
+        addGameVersion minecraft_version
+        addGameVersion "Forge"
+        mainArtifact(jar)
+    }
+    options {
+        debug = false
+        forgeGradleIntegration = true
     }
 }
 

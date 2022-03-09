@@ -25,6 +25,8 @@ import com.lilypuree.connectiblechains.util.Helper;
 import com.mojang.math.Vector3f;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Registry;
+import net.minecraft.data.tags.BlockTagsProvider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -49,6 +51,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -222,7 +225,7 @@ public class ChainKnotEntity extends HangingEntity {
      * @return boolean - if it can stay attached.
      */
     public boolean canStayAttached() {
-        Block block = this.level.getBlockState(this.pos).getBlock();
+        BlockState block = this.level.getBlockState(this.pos);
         return canConnectTo(block);
     }
 
@@ -232,8 +235,8 @@ public class ChainKnotEntity extends HangingEntity {
      * @param block the block in question.
      * @return boolean if is allowed or not.
      */
-    public static boolean canConnectTo(Block block) {
-        return BlockTags.WALLS.contains(block) || BlockTags.FENCES.contains(block);
+    public static boolean canConnectTo(BlockState block) {
+        return block.is(BlockTags.WALLS) || block.is(BlockTags.FENCES);
     }
 
     @Override
@@ -263,7 +266,7 @@ public class ChainKnotEntity extends HangingEntity {
             if (sourceEntity instanceof Player player) {
                 boolean isCreative = ((Player) sourceEntity).isCreative();
                 if (!player.getMainHandItem().isEmpty()
-                        && Tags.Items.SHEARS.contains(player.getMainHandItem().getItem())) {
+                        && player.getMainHandItem().is(Tags.Items.SHEARS)) {
                     ArrayList<Entity> list = this.getHoldingEntities();
                     for (Entity entity : list) {
                         if (entity instanceof ChainKnotEntity) {
@@ -583,7 +586,7 @@ public class ChainKnotEntity extends HangingEntity {
         if (level.addFreshEntity(c)) {
             return c;
         } else {
-            LOGGER.warn("Tried to summon collision entity for a chain, failed to do so");
+            ConnectibleChains.LOGGER.warn("Tried to summon collision entity for a chain, failed to do so");
             return null;
         }
     }
