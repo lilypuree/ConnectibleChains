@@ -28,16 +28,26 @@ import net.minecraft.util.Mth;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ChainModel {
+/**
+ * The geometry is baked (converted to an efficient format) into vertex and uv arrays.
+ * This prevents having to recalculate the model every frame.
+ */
+public record ChainModel(float[] vertices, float[] uvs) {
 
-    private final float[] vertices;
-    private final float[] uvs;
-
-    public ChainModel(float[] vertices, float[] uvs) {
-        this.vertices = vertices;
-        this.uvs = uvs;
+    public static Builder builder(int initialCapacity) {
+        return new Builder(initialCapacity);
     }
 
+    /**
+     * Writes the model data to {@code buffer} and applies lighting.
+     *
+     * @param buffer   The target buffer.
+     * @param matrices The transformation stack
+     * @param bLight0  Block-light at the start.
+     * @param bLight1  Block-light at the end.
+     * @param sLight0  Sky-light at the start.
+     * @param sLight1  Sky-light at the end.
+     */
     public void render(VertexConsumer buffer, PoseStack matrices, int bLight0, int bLight1, int sLight0, int sLight1) {
         Matrix4f modelMatrix = matrices.last().pose();
         Matrix3f normalMatrix = matrices.last().normal();
@@ -55,14 +65,12 @@ public class ChainModel {
                     .uv(uvs[i*2], uvs[i*2+1])
                     .overlayCoords(OverlayTexture.NO_OVERLAY)
                     .uv2(light)
-                    .normal(normalMatrix, 0, 1, 0)
+                    // trial and error magic values that change the overall brightness of the chain
+                    .normal(normalMatrix, 0, 0.35f, 0)
                     .endVertex();
         }
     }
 
-    public static Builder builder(int initialCapacity) {
-        return new Builder(initialCapacity);
-    }
 
     public static class Builder {
         private final List<Float> vertices;

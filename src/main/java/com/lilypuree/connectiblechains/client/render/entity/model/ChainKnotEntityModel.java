@@ -39,6 +39,8 @@ import java.util.function.Function;
 /**
  * Model for the {@link com.lilypuree.connectiblechains.entity.ChainKnotEntity}.
  * Similar to the {@link net.minecraft.client.model.LeashKnotModel} code.
+ * <p>
+ * The model is 6x3x6 pixels big.
  *
  * @see net.minecraft.client.renderer.entity.LeashKnotRenderer
  * @author legoatoom
@@ -62,8 +64,8 @@ public class ChainKnotEntityModel<T extends Entity> extends HierarchicalModel<T>
 
     @Override
     public void setupAnim(T pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
-        this.chainKnot.yRot = pNetHeadYaw * 0.017453292F;
-        this.chainKnot.xRot = pHeadPitch * 0.017453292F;
+//        this.chainKnot.yRot = pNetHeadYaw * 0.017453292F;
+//        this.chainKnot.xRot = pHeadPitch * 0.017453292F;
     }
 
     @Override

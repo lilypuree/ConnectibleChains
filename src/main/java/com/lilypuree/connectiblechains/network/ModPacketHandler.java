@@ -40,5 +40,11 @@ public class ModPacketHandler {
                 .consumer(S2CMultiChainAttachPacket::handle)
                 .add();
 
+        INSTANCE.messageBuilder(S2CKnotChangeTypePacket.class, nextID())
+                .encoder(S2CKnotChangeTypePacket::toBytes)
+                .decoder(S2CKnotChangeTypePacket::new)
+                .consumer(S2CKnotChangeTypePacket::handle)
+                .add();
+
     }
 }

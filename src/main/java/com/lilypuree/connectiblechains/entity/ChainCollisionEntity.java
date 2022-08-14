@@ -16,97 +16,75 @@
  */
 package com.lilypuree.connectiblechains.entity;
 
+import com.lilypuree.connectiblechains.chain.ChainLink;
+import com.lilypuree.connectiblechains.chain.ChainType;
+import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
+import com.lilypuree.connectiblechains.client.ClientInitializer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.common.Tags;
 import net.minecraftforge.entity.IEntityAdditionalSpawnData;
 import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * ChainCollisionEntity is an Entity that is invisible but has a collision.
- * It is used to create a collision for connections between chains.
+ * It is used to create a collision for links.
  *
- * @author legoatoom
+ * @author legoatoom, Quendolin
  */
-public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpawnData {
-    /**
-     * The chainKnot entity id that has a connection to another chainKnot with id {@link #endOwnerId}.
-     */
-    private int startOwnerId;
-    /**
-     * The chainKnot entity id that has a connection from another chainKnot with id {@link #startOwnerId}.
-     */
-    private int endOwnerId;
+public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpawnData, ChainLinkEntity {
 
-    public void setStartOwnerId(int startOwnerId) {
-        this.startOwnerId = startOwnerId;
-    }
 
-    public void setEndOwnerId(int endOwnerId) {
-        this.endOwnerId = endOwnerId;
-    }
+    /**
+     * The link that this collider is a part of.
+     */
+    @Nullable
+    private ChainLink link;
+
+    /**
+     * On the client only the chainType information is present, for the pick item action mostly
+     */
+    private ChainType chainType;
+
 
     public ChainCollisionEntity(EntityType<?> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
     }
 
-    public ChainCollisionEntity(Level world, double x, double y, double z, int startOwnerId, int endOwnerId) {
+    public ChainCollisionEntity(Level world, double x, double y, double z, @NotNull ChainLink link) {
         this(ModEntityTypes.CHAIN_COLLISION.get(), world);
-        this.startOwnerId = startOwnerId;
-        this.endOwnerId = endOwnerId;
+        this.link = link;
         this.setPos(x, y, z);
     }
 
-    /**
-     * When this entity is attacked by a player with a item that has Tag: {@link net.minecraftforge.common.Tags.Items#SHEARS},
-     * it calls the {@link ChainKnotEntity#damageLink(boolean, ChainKnotEntity)} method
-     * to destroy the link between the {@link #startOwnerId} and {@link #endOwnerId}
-     */
-    @Override
-    public boolean hurt(DamageSource source, float pAmount) {
-        if (this.isInvulnerableTo(source)) {
-            return false;
-        } else if (!this.level.isClientSide) {
-            Entity startOwner = this.level.getEntity(startOwnerId);
-            Entity endOwner = this.level.getEntity(endOwnerId);
-            Entity sourceEntity = source.getEntity();
-            if (source.getDirectEntity() instanceof AbstractArrow) {
-                return false;
-            } else if (sourceEntity instanceof Player player
-                    && startOwner instanceof ChainKnotEntity && endOwner instanceof ChainKnotEntity) {
-                boolean isCreative = player.isCreative();
-                if (!player.getMainHandItem().isEmpty() && player.getMainHandItem().is(Tags.Items.SHEARS)) {
-                    ((ChainKnotEntity) startOwner).damageLink(isCreative, (ChainKnotEntity) endOwner);
-                }
-            }
-            return true;
-        } else {
-            return !(source.getDirectEntity() instanceof AbstractArrow);
-        }
+    public @Nullable ChainLink getLink() {
+        return link;
+    }
+
+    public ChainType getChainType() {
+        return chainType;
+    }
+
+    public void setChainType(ChainType chainType) {
+        this.chainType = chainType;
     }
 
     @Override
-    public boolean skipAttackInteraction(Entity attacker) {
-        playSound(SoundEvents.CHAIN_HIT, 0.5F, 1.0F);
-        if (attacker instanceof Player playerEntity) {
-            return this.hurt(DamageSource.playerAttack(playerEntity), 0.0F);
-        } else {
-            return false;
-        }
+    protected void defineSynchedData() {
+        // Required by Entity
     }
-
 
     @Override
     public boolean isPickable() {
@@ -123,19 +101,64 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
         return false;
     }
 
+
     @Override
-    protected void defineSynchedData() {
-        // Required by Entity
+    public boolean shouldRenderAtSqrDistance(double pDistance) {
+        if (ClientInitializer.checkCollisionEntityWithinRenderDistance(this, pDistance)) {
+            return super.shouldRenderAtSqrDistance(pDistance);
+        } else {
+            return false;
+        }
     }
 
     @Override
     protected void readAdditionalSaveData(CompoundTag pCompound) {
-        // Required by Entity, but does nothing.
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag pCompound) {
-        // Required by Entity, but does nothing.
+    }
+
+
+    /**
+     * @see ChainKnotEntity#skipAttackInteraction(Entity)
+     */
+    @Override
+    public boolean skipAttackInteraction(Entity attacker) {
+        if (attacker instanceof Player playerEntity) {
+            return this.hurt(DamageSource.playerAttack(playerEntity), 0.0F);
+        } else {
+            playSound(SoundEvents.CHAIN_HIT, 0.5F, 1.0F);
+        }
+        return true;
+    }
+
+    /**
+     * @see ChainKnotEntity#hurt(DamageSource, float)
+     */
+    @Override
+    public boolean hurt(DamageSource source, float pAmount) {
+        InteractionResult result = ChainLinkEntity.onDamageFrom(this, source);
+
+        if (result.consumesAction()) {
+            destroyLinks(result == InteractionResult.SUCCESS);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void destroyLinks(boolean mayDrop) {
+        if (link != null) link.destroy(mayDrop);
+    }
+
+    @Override
+    public InteractionResult interact(Player pPlayer, InteractionHand pHand) {
+        if (ChainLinkEntity.canDestroyWith(pPlayer.getItemInHand(pHand))) {
+            destroyLinks(!pPlayer.isCreative());
+            return InteractionResult.SUCCESS;
+        }
+        return InteractionResult.PASS;
     }
 
     @Override
@@ -145,18 +168,31 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
 
     @Override
     public void writeSpawnData(FriendlyByteBuf buffer) {
-        buffer.writeVarInt(startOwnerId);
-        buffer.writeVarInt(endOwnerId);
+        ChainType chainType = link == null ? ChainTypesRegistry.DEFAULT_CHAIN_TYPE: link.chainType;
+        buffer.writeResourceLocation(ChainTypesRegistry.getKey(chainType));
     }
 
     @Override
     public void readSpawnData(FriendlyByteBuf additionalData) {
-        this.startOwnerId = additionalData.readVarInt();
-        this.endOwnerId = additionalData.readVarInt();
+        this.setChainType(ChainTypesRegistry.getValue(additionalData.readResourceLocation()));
+    }
+
+    @Override
+    public void tick() {
+        if (level.isClientSide) return;
+
+        // Condition can be met when the knots were removed with commands
+        // but the collider still exists
+        if (link != null && link.needsBeDestroyed()) link.destroy(true);
+
+        // Collider removes itself when the link is dead
+        if (link == null || link.isDead()) {
+            remove(Entity.RemovalReason.DISCARDED);
+        }
     }
 
     @Override
     public ItemStack getPickedResult(HitResult target) {
-        return new ItemStack(Items.CHAIN);
+        return new ItemStack(chainType.item());
     }
 }

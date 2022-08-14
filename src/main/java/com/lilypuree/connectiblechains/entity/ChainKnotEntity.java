@@ -18,19 +18,22 @@
 package com.lilypuree.connectiblechains.entity;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
+import com.lilypuree.connectiblechains.chain.ChainLink;
+import com.lilypuree.connectiblechains.chain.ChainType;
+import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
+import com.lilypuree.connectiblechains.datafixer.ChainKnotFixer;
 import com.lilypuree.connectiblechains.network.ModPacketHandler;
-import com.lilypuree.connectiblechains.network.S2CChainAttachPacket;
-import com.lilypuree.connectiblechains.network.S2CChainDetachPacket;
-import com.lilypuree.connectiblechains.util.Helper;
-import com.mojang.math.Vector3f;
+import com.lilypuree.connectiblechains.network.S2CKnotChangeTypePacket;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Registry;
-import net.minecraft.data.tags.BlockTagsProvider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
@@ -43,134 +46,109 @@ import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.decoration.HangingEntity;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.Tags;
+import net.minecraftforge.entity.IEntityAdditionalSpawnData;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
 
-import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * The ChainKnotEntity is the main entity of this mod.
  * It has connections between others of its kind, and is a combination of {@link net.minecraft.world.entity.Mob}
  * and {@link net.minecraft.world.entity.decoration.LeashFenceKnotEntity}.
  *
- * @author legoatoom
+ * @author legoatoom, Qendolin
  */
-public class ChainKnotEntity extends HangingEntity {
+public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalSpawnData, ChainLinkEntity {
     /**
      * The distance when it is visible.
      */
-    private static final double VISIBLE_RANGE = 2048.0D;
+    public static final double VISIBLE_RANGE = 2048.0D;
 
     /**
-     * The x/z distance between {@link ChainCollisionEntity ChainCollisionEntities}.
-     * A value of 1 means they are "shoulder to shoulder"
+     * Ticks where the knot can live without any links.
+     * This is important for 2 reasons: When the world loads, a 'secondary' knot might load before it's 'primary'
+     * In which case the knot would remove itself as it has no links and when the 'primary' loads it fails to create
+     * a link to this as this is already removed. The second use is for /summon for basically the same reasons.
      */
-    private static final float COLLIDER_SPACING = 1.5f;
+    private static final byte GRACE_PERIOD = 100;
 
     /**
-     * A map that holds a list of entity ids. These entities should be {@link ChainCollisionEntity ChainCollisionEntities}
-     * The key is the entity id of the ChainKnot that this is connected to.
+     * All links that involve this knot (secondary and primary)
      */
-    public final Map<Integer, ArrayList<Integer>> COLLISION_STORAGE;
+    private final ObjectList<ChainLink> links = new ObjectArrayList<>();
 
     /**
-     * A map of entities that this chain is connected to.
-     * The entity can be a {@link Player} or a {@link ChainKnotEntity}.
+     * Links where the 'secondary' might not exist yet. Will be cleared after the grace period.
      */
-    private final Map<Integer, Entity> holdingEntities = new HashMap<>();
+    private final ObjectList<Tag> incompleteLinks = new ObjectArrayList<>();
 
     /**
-     * A counter of how many other chainsKnots connect to this.
+     * Increments each tick, when it reached 100 it resets and checks {@link #canStayAttached()}.
      */
-    private int holdersCount = 0;
+    private int obstructionCheckTimer = 0;
 
     /**
-     * The Tag that stores everything
+     * The chain type, used for rendering
      */
-    private ListTag chainTags;
+    private ChainType chainType = ChainTypesRegistry.DEFAULT_CHAIN_TYPE;
 
     /**
-     * A timer integer for destroying this entity if it isn't connected anything.
+     * Remaining grace ticks, will be set to 0 when the last incomplete link is removed.
      */
-    private int obstructionCheckCounter;
+    private byte graceTicks = GRACE_PERIOD;
+
+    /**
+     * What block the knot is attached to. (client side only)
+     */
+    private BlockState attachTarget;
 
     protected ChainKnotEntity(EntityType<? extends HangingEntity> entityType, Level level) {
         super(entityType, level);
-        this.COLLISION_STORAGE = new HashMap<>();
     }
 
-    public ChainKnotEntity(Level world, BlockPos pos) {
+    public ChainKnotEntity(Level world, BlockPos pos, ChainType chainType) {
         super(ModEntityTypes.CHAIN_KNOT.get(), world, pos);
         this.setPos((double) pos.getX() + 0.5D, (double) pos.getY() + 0.5D, (double) pos.getZ() + 0.5D);
-        this.COLLISION_STORAGE = new HashMap<>();
+        this.chainType = chainType;
     }
 
     /**
-     * This method tries to check if around the target there are other {@link ChainKnotEntity ChainKnotEntities} that
-     * have a connection to this player, if so we make a chainKnot at the location and connect the chain to it and remove
-     * the connection to the player.
+     * Set the {@link #pos}.
      *
-     * @param playerEntity the player wo tries to make a connection.
-     * @param world        The current world.
-     * @param pos          the position where we want to make a chainKnot.
-     * @param chain        nullable chainKnot if one already has one, if null, we will make one only if we have to make a connection.
-     * @return boolean, if it has made a connection.
-     */
-    public static Boolean tryAttachHeldChainsToBlock(Player playerEntity, Level world, BlockPos pos, @Nullable ChainKnotEntity chain) {
-        boolean hasMadeConnection = false;
-        double i = pos.getX();
-        double j = pos.getY();
-        double k = pos.getZ();
-        List<ChainKnotEntity> list = world.getEntitiesOfClass(ChainKnotEntity.class,
-                new AABB(i - getMaxRange(), j - getMaxRange(), k - getMaxRange(),
-                        i + getMaxRange(), j + getMaxRange(), k + getMaxRange()));
-
-        for (ChainKnotEntity otherKnots : list) {
-            if (otherKnots.getHoldingEntities().contains(playerEntity)) {
-                if (!otherKnots.equals(chain)) {
-                    // We found a knot that is connected to the player and therefore needs to connect to the chain.
-                    if (chain == null) {
-                        chain = new ChainKnotEntity(world, pos);
-                        world.addFreshEntity(chain);
-                        chain.playPlacementSound();
-                    }
-
-                    otherKnots.attachChain(chain, true, playerEntity.getId());
-                    hasMadeConnection = true;
-                }
-            }
-        }
-        return hasMadeConnection;
-    }
-
-    /**
-     * The max range of the chain.
-     */
-    public static double getMaxRange() {
-        return ConnectibleChains.runtimeConfig.getMaxChainRange();
-    }
-
-    /**
-     * This entity does not want to set a facing.
+     * @see #recalculateBoundingBox()
      */
     @Override
+    public void setPos(double x, double y, double z) {
+        super.setPos((double) Mth.floor(x) + 0.5D, (double) Mth.floor(y) + 0.5D, (double) Mth.floor(z) + 0.5D);
+    }
+
+    public ChainType getChainType() {
+        return chainType;
+    }
+
+    public void setChainType(ChainType chainType) {
+        this.chainType = chainType;
+    }
+
+    public void setGraceTicks(byte graceTicks) {
+        this.graceTicks = graceTicks;
+    }
+
+    @Override
     protected void setDirection(Direction pFacingDirection) {
+        // AbstractDecorationEntity.facing should not be used
     }
 
     /**
@@ -185,38 +163,149 @@ public class ChainKnotEntity extends HangingEntity {
     }
 
     /**
-     * This happens every tick.
-     * It deletes the chainEntity if it is in the void.
-     * It updates the chains, see {@link #updateChains()}
-     * It checks if it is still connected to a block every 100 ticks.
+     * On the server it:
+     * <ol>
+     * <li>Checks if its in the void and deletes itself.</li>
+     * <li>Tries to convert incomplete links</li>
+     * <li>Updates the chains, see {@link #updateLinks()}</li>
+     * <li>Removes any dead links, and, when outside the grace period, itself if none are left.</li>
+     * </ol>
      */
     @Override
     public void tick() {
         if (this.level.isClientSide) {
+            // All other logic in handled on the server. The client only knows enough to render the entity.
+            links.removeIf(ChainLink::isDead);
+            attachTarget = level.getBlockState(pos);
             return;
         }
-        if (this.getY() < -64.0D) {
-            this.outOfWorld();
-        }
-        this.updateChains();
+        checkOutOfWorld();
 
-        if (this.obstructionCheckCounter++ == 100) {
-            this.obstructionCheckCounter = 0;
-            if (!isRemoved() && !this.canStayAttached()) {
-                ArrayList<Entity> list = this.getHoldingEntities();
-                for (Entity entity : list) {
-                    if (entity instanceof ChainKnotEntity) {
-                        damageLink(false, (ChainKnotEntity) entity);
-                    }
-                }
-                this.remove(RemovalReason.KILLED);
-                this.dropItem(null);
+        boolean anyConverted = convertIncompleteLinks();
+        updateLinks();
+        removeDeadLinks();
+
+        if (graceTicks < 0 || (anyConverted && incompleteLinks.isEmpty())) {
+            graceTicks = 0;
+        } else if (graceTicks > 0) {
+            graceTicks--;
+        }
+    }
+
+    /**
+     * Will try to convert any {@link #incompleteLinks} using {@link #deserializeChainTag(Tag)}.
+     *
+     * @return true if any were converted
+     */
+    private boolean convertIncompleteLinks() {
+        if (!incompleteLinks.isEmpty()) {
+            return incompleteLinks.removeIf(this::deserializeChainTag);
+        }
+        return false;
+    }
+
+    /**
+     * Will break all connections that are larger than the {@link #getMaxRange()},
+     * when this knot is dead, or can't stay attached.
+     */
+    private void updateLinks() {
+        double squaredMaxRange = getMaxRange() * getMaxRange();
+        for (ChainLink link : links) {
+            if (link.isDead()) continue;
+
+            if (!isAlive()) {
+                link.destroy(true);
+            } else if (link.primary == this && link.getSquaredDistance() > squaredMaxRange) {
+                // no need to check the distance on both ends
+                link.destroy(true);
+            }
+        }
+
+        if (obstructionCheckTimer++ == 100) {
+            obstructionCheckTimer = 0;
+            if (!canStayAttached()) {
+                destroyLinks(true);
             }
         }
     }
 
-    public void setObstructionCheckCounter() {
-        this.obstructionCheckCounter = 100;
+    /**
+     * Removes any dead links and plays a break sound if any were removed.
+     * Removes itself when no {@link #links} or {@link #incompleteLinks} are left, and it's outside the grace period.
+     */
+    private void removeDeadLinks() {
+        boolean playBreakSound = false;
+        for (ChainLink link : links) {
+            if (link.needsBeDestroyed()) link.destroy(true);
+            if (link.isDead() && !link.removeSilently) playBreakSound = true;
+        }
+        if (playBreakSound) dropItem(null);
+
+        links.removeIf(ChainLink::isDead);
+        if (links.isEmpty() && incompleteLinks.isEmpty() && graceTicks <= 0) {
+            remove(RemovalReason.DISCARDED);
+            // No break sound
+        }
+    }
+
+    /**
+     * This method tries to connect to the secondary that is in the {@link #incompleteLinks}.
+     * If they do not exist yet, we try again later. If they do, make a connection and remove it from the tag.
+     * <br>
+     * When the grace period is over, we remove the tag from the {@link #incompleteLinks} and drop an item
+     * meaning that we cannot find the connection anymore, and we assume that it will not be loaded in the future.
+     *
+     * @param element the tag that contains a single connection.
+     * @return true if the tag has been used
+     * @see #updateLinks()
+     */
+    private boolean deserializeChainTag(Tag element) {
+        if (element == null || level.isClientSide) {
+            return true;
+        }
+
+        assert element instanceof CompoundTag;
+        CompoundTag tag = (CompoundTag) element;
+
+        ChainType chainType = ChainTypesRegistry.getValue(tag.getString("ChainType"));
+
+        if (tag.contains("UUID")) {
+            UUID uuid = tag.getUUID("UUID");
+            Entity entity = ((ServerLevel) level).getEntity(uuid);
+            if (entity != null) {
+                ChainLink.create(this, entity, chainType);
+                return true;
+            }
+        } else if (tag.contains("RelX") || tag.contains("RelY") || tag.contains("RelZ")) {
+            BlockPos blockPos = new BlockPos(tag.getInt("RelX"), tag.getInt("RelY"), tag.getInt("RelZ"));
+            // Adjust position to be relative to our facing direction
+            blockPos = getBlockPosAsFacingRelative(blockPos, Direction.fromYRot(this.getYRot()));
+            ChainKnotEntity entity = ChainKnotEntity.getKnotAt(level, blockPos.offset(pos));
+            if (entity != null) {
+                ChainLink.create(this, entity, chainType);
+                return true;
+            }
+        } else {
+            ConnectibleChains.LOGGER.warn("Chain knot NBT is missing UUID or relative position.");
+        }
+
+        // At the start the server and client need to tell each other the info.
+        // So we need to check if the object is old enough for these things to exist before we delete them.
+        if (graceTicks <= 0) {
+            spawnAtLocation(chainType.item());
+            dropItem(null);
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /**
+     * The max range of the chain.
+     */
+    public static double getMaxRange() {
+        return ConnectibleChains.runtimeConfig.getMaxChainRange();
     }
 
     /**
@@ -226,7 +315,59 @@ public class ChainKnotEntity extends HangingEntity {
      */
     public boolean canStayAttached() {
         BlockState block = this.level.getBlockState(this.pos);
-        return canConnectTo(block);
+        return canAttachTo(block);
+    }
+
+    /**
+     * Destroys all links and sets the grace ticks to 0
+     *
+     * @param mayDrop true when the links should drop
+     */
+    @Override
+    public void destroyLinks(boolean mayDrop) {
+        for (ChainLink link : links) {
+            link.destroy(mayDrop);
+        }
+        graceTicks = 0;
+    }
+
+    @Override
+    public void dropItem(Entity entity) {
+        this.playSound(SoundEvents.CHAIN_BREAK, 1.0F, 1.0F);
+    }
+
+    /**
+     * To support structure blocks which can rotate structures we need to treat the relative secondary position in the
+     * NBT as relative to our facing direction.
+     *
+     * @param relPos The relative position when the knot would be facing the +Z direction (0 deg).
+     * @param facing The target direction
+     * @return The yaw's equivalent block rotation.
+     */
+    private BlockPos getBlockPosAsFacingRelative(BlockPos relPos, Direction facing) {
+        Rotation rotation = Rotation.values()[facing.get2DDataValue()];
+        return relPos.rotate(rotation);
+    }
+
+    /**
+     * Searches for a knot at {@code pos} and returns it.
+     *
+     * @param world The world to search in.
+     * @param pos   The position to search at.
+     * @return {@link ChainKnotEntity} or null when none exists at {@code pos}.
+     */
+    @org.jetbrains.annotations.Nullable
+    public static ChainKnotEntity getKnotAt(Level world, BlockPos pos) {
+        List<ChainKnotEntity> results = world.getEntitiesOfClass(ChainKnotEntity.class,
+                AABB.ofSize(Vec3.atLowerCornerOf(pos), 2, 2, 2));
+
+        for (ChainKnotEntity current : results) {
+            if (current.getPos().equals(pos)) {
+                return current;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -235,100 +376,124 @@ public class ChainKnotEntity extends HangingEntity {
      * @param block the block in question.
      * @return boolean if is allowed or not.
      */
-    public static boolean canConnectTo(BlockState block) {
-        return block.is(BlockTags.WALLS) || block.is(BlockTags.FENCES);
-    }
-
-    @Override
-    public boolean skipAttackInteraction(Entity attacker) {
-        playSound(SoundEvents.CHAIN_HIT, 0.5F, 1.0F);
-        if (attacker instanceof Player playerEntity) {
-            return this.hurt(DamageSource.playerAttack(playerEntity), 0.0F);
-        } else {
-            return false;
-        }
+    public static boolean canAttachTo(BlockState block) {
+        return block != null && block.is(BlockTags.WALLS) || block.is(BlockTags.FENCES);
     }
 
     /**
-     * When this entity is being attacked, we remove all connections and then remove this entity.
+     * Mirrors the incomplete links, otherwise {@link #getBlockPosAsFacingRelative(BlockPos, Direction)} won't work.
+     */
+    @Override
+    public float mirror(Mirror mirror) {
+        if (mirror != Mirror.NONE) {
+            // Mirror the X axis, I am not sure why
+            for (Tag element : incompleteLinks) {
+                if (element instanceof CompoundTag link) {
+                    if (link.contains("RelX")) {
+                        link.putInt("RelX", -link.getInt("RelX"));
+                    }
+                }
+            }
+        }
+
+        // Opposite of Entity.applyMirror, again I am not sure why, but it works
+        float yaw = Mth.wrapDegrees(this.getYRot());
+        return switch (mirror) {
+            case LEFT_RIGHT -> 180 - yaw;
+            case FRONT_BACK -> -yaw;
+            default -> yaw;
+        };
+    }
+
+    /**
+     * Calls {@link #hurt(DamageSource, float)} when attacked by a player. Plays a hit sound otherwise. <br/>
+     * It is used by {@link Player#attack(Entity)} where a true return value indicates
+     * that this entity handled the attack and no further actions should be made.
      *
-     * @return if it is successfully attacked.
+     * @param attacker The source of the attack.
+     * @return true
+     */
+    @Override
+    public boolean skipAttackInteraction(Entity attacker) {
+        if (attacker instanceof Player playerEntity) {
+            this.hurt(DamageSource.playerAttack(playerEntity), 0.0F);
+        } else {
+            playSound(SoundEvents.CHAIN_HIT, 0.5F, 1.0F);
+        }
+        return true;
+    }
+
+    /**
+     * @return true when damage was effective
+     * @see ChainKnotEntity#onDamageFrom(Entity, DamageSource)
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (this.isInvulnerableTo(source)) {
-            return false;
-        } else if (!this.level.isClientSide && !isRemoved()) {
-            Entity sourceEntity = source.getEntity();
-            if (source.getDirectEntity() instanceof AbstractArrow) {
-                return false;
-            }
-            if (sourceEntity instanceof Player player) {
-                boolean isCreative = ((Player) sourceEntity).isCreative();
-                if (!player.getMainHandItem().isEmpty()
-                        && player.getMainHandItem().is(Tags.Items.SHEARS)) {
-                    ArrayList<Entity> list = this.getHoldingEntities();
-                    for (Entity entity : list) {
-                        if (entity instanceof ChainKnotEntity) {
-                            damageLink(isCreative, (ChainKnotEntity) entity);
-                        }
-                    }
-                    this.dropItem(null);
-                    this.remove(RemovalReason.KILLED);
-                }
-            }
+        InteractionResult result = ChainLinkEntity.onDamageFrom(this, source);
+
+        if (result.consumesAction()) {
+            destroyLinks(result == InteractionResult.SUCCESS);
             return true;
-        } else {
-            return !(source.getDirectEntity() instanceof AbstractArrow);
         }
+        return false;
     }
 
     /**
-     * Method to write all connections in a {@link Tag} when we save the game.
-     * It doesn't store the {@link #holdersCount} or {@link #COLLISION_STORAGE} since
-     * they will be updated when connection are being remade when we read it.
+     * Stores the {@link #chainType chain type} and all primary links
+     * and old, incomplete links inside {@code root}
      *
-     * @param tag the tag to write info in.
+     * @param root the tag to write info in.
      */
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        boolean b = false;
-        ListTag listTag = new ListTag();
-        for (Entity entity : this.holdingEntities.values()) {
-            if (entity != null) {
-                CompoundTag compoundTag = new CompoundTag();
-                if (entity instanceof Player) {
-                    UUID uuid = entity.getUUID();
-                    compoundTag.putUUID("UUID", uuid);
-                    b = true;
-                } else if (entity instanceof HangingEntity) {
-                    BlockPos blockPos = ((HangingEntity) entity).getPos();
-                    compoundTag.putInt("X", blockPos.getX());
-                    compoundTag.putInt("Y", blockPos.getY());
-                    compoundTag.putInt("Z", blockPos.getZ());
-                    b = true;
-                }
-                listTag.add(compoundTag);
+    public void addAdditionalSaveData(CompoundTag root) {
+        ChainKnotFixer.INSTANCE.addVersionTag(root);
+        root.putString("ChainType", ChainTypesRegistry.getKey(chainType).toString());
+        ListTag linksTag = new ListTag();
+
+        // Write complete links
+        for (ChainLink link : links) {
+            if (link.isDead()) continue;
+            if (link.primary != this) continue;
+            Entity secondary = link.secondary;
+            CompoundTag compoundTag = new CompoundTag();
+            compoundTag.putString("ChainType", ChainTypesRegistry.getKey(link.chainType).toString());
+            if (secondary instanceof Player) {
+                UUID uuid = secondary.getUUID();
+                compoundTag.putUUID("UUID", uuid);
+            } else if (secondary instanceof HangingEntity) {
+                BlockPos srcPos = this.pos;
+                BlockPos dstPos = ((HangingEntity) secondary).getPos();
+                BlockPos relPos = dstPos.subtract(srcPos);
+                // Inverse rotation to store the position as 'facing' agnostic
+                Direction inverseFacing = Direction.fromYRot(Direction.SOUTH.toYRot() - getYRot());
+                relPos = getBlockPosAsFacingRelative(relPos, inverseFacing);
+                compoundTag.putInt("RelX", relPos.getX());
+                compoundTag.putInt("RelY", relPos.getY());
+                compoundTag.putInt("RelZ", relPos.getZ());
             }
+            linksTag.add(compoundTag);
         }
-        if (b) {
-            tag.put("Chains", listTag);
-        } else if (chainTags != null && !chainTags.isEmpty()) {
-            tag.put("Chains", chainTags.copy());
+
+        // Write old, incomplete links
+        linksTag.addAll(incompleteLinks);
+
+        if (!linksTag.isEmpty()) {
+            root.put("Chains", linksTag);
         }
     }
 
     /**
-     * Read all the info into the {@link #chainTags}
-     * We do not make connections here because not all entities might be loaded yet.
+     * Read all the data from {@link #addAdditionalSaveData(CompoundTag)}
+     * and stores the links in {@link #incompleteLinks}.
      *
-     * @param tag the tag to read from.
+     * @param root the tag to read from.
      */
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        if (tag.contains("Chains")) {
-            this.chainTags = tag.getList("Chains", 10);
+    public void readAdditionalSaveData(CompoundTag root) {
+        if (root.contains("Chains")) {
+            incompleteLinks.addAll(root.getList("Chains", Tag.TAG_COMPOUND));
         }
+        chainType = ChainTypesRegistry.getValue(root.getString("ChainType"));
     }
 
     @Override
@@ -341,9 +506,130 @@ public class ChainKnotEntity extends HangingEntity {
         return 9;
     }
 
+    /**
+     * Checks if the {@code distance} is within the {@link #VISIBLE_RANGE visible range}.
+     *
+     * @param distance the camera distance from the knot.
+     * @return true when it is in range.
+     */
     @Override
-    public void dropItem(Entity entity) {
-        this.playSound(SoundEvents.CHAIN_BREAK, 1.0F, 1.0F);
+    public boolean shouldRenderAtSqrDistance(double distance) {
+        return distance < VISIBLE_RANGE;
+    }
+
+    @Override
+    public Vec3 getLeashOffset() {
+        return new Vec3(0, 4.5 / 16f, 0);
+    }
+
+    @Override
+    public Vec3 getRopeHoldPosition(float pPartialTicks) {
+        return this.getPosition(pPartialTicks).add(0.0D, 4.5 / 16f, 0.0D);
+    }
+
+    @Override
+    protected float getEyeHeight(Pose pPose, EntityDimensions pSize) {
+        return 4.5f / 16f;
+    }
+
+    /**
+     * Interaction (attack or use) of a player and this entity.
+     * On the server it will:
+     * <ol>
+     * <li>Try to move existing link from player to this.</li>
+     * <li>Try to cancel chain links (when clicking a knot that already has a connection to {@code player}).</li>
+     * <li>Try to create a new connection.</li>
+     * <li>Try to destroy the knot with the item in the players hand.</li>
+     * </ol>
+     *
+     * @param player The player that interacted.
+     * @param hand   The hand that interacted.
+     * @return {@link InteractionResult#SUCCESS} or {@link InteractionResult#CONSUME} when the interaction was successful.
+     * @see #tryAttachHeldChains(Player)
+     */
+    @Override
+    public InteractionResult interact(Player player, InteractionHand hand) {
+        ItemStack handStack = player.getItemInHand(hand);
+        if (level.isClientSide) {
+            if (ChainTypesRegistry.ITEM_CHAIN_TYPES.containsKey(handStack.getItem())) {
+                return InteractionResult.SUCCESS;
+            }
+
+            if (ChainLinkEntity.canDestroyWith(handStack)) {
+                return InteractionResult.SUCCESS;
+            }
+
+            return InteractionResult.PASS;
+        }
+
+        // 1. Try to move existing link from player to this.
+        boolean madeConnection = tryAttachHeldChains(player);
+        if (madeConnection) {
+            playPlacementSound();
+            return InteractionResult.CONSUME;
+        }
+
+        // 2. Try to cancel chain links (when clicking same knot twice)
+        boolean broke = false;
+        for (ChainLink link : links) {
+            if (link.secondary == player) {
+                broke = true;
+                link.destroy(true);
+            }
+        }
+        if (broke) {
+            return InteractionResult.CONSUME;
+        }
+
+        // 3. Try to create a new connection
+        if (ChainTypesRegistry.ITEM_CHAIN_TYPES.containsKey(handStack.getItem())) {
+            // Interacted with a valid chain item, create a new link
+            playPlacementSound();
+            ChainType chainType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(handStack.getItem());
+            ChainLink.create(this, player, chainType);
+            if (!player.isCreative()) {
+                player.getItemInHand(hand).shrink(1);
+            }
+            // Allow changing the chainType of the knot
+            updateChainType(chainType);
+
+            return InteractionResult.CONSUME;
+        }
+
+        // 4. Interacted with anything else, check for shears
+        if (ChainLinkEntity.canDestroyWith(handStack)) {
+            destroyLinks(!player.isCreative());
+            graceTicks = 0;
+            return InteractionResult.CONSUME;
+        }
+
+        return InteractionResult.PASS;
+    }
+
+    /**
+     * Destroys all chains held by {@code player} that are in range and creates new links to itself.
+     *
+     * @param player the player wo tries to make a connection.
+     * @return true if it has made a connection.
+     */
+    public boolean tryAttachHeldChains(Player player) {
+        boolean hasMadeConnection = false;
+        List<ChainLink> attachableLinks = getHeldChainsInRange(player, getPos());
+        for (ChainLink link : attachableLinks) {
+            // Prevent connections with self
+            if (link.primary == this) continue;
+
+            // Move that link to this knot
+            ChainLink newLink = ChainLink.create(link.primary, this, link.chainType);
+
+            // Check if the link does not already exist
+            if (newLink != null) {
+                link.destroy(false);
+                link.removeSilently = true;
+                hasMadeConnection = true;
+            }
+        }
+        return hasMadeConnection;
     }
 
     @Override
@@ -352,373 +638,59 @@ public class ChainKnotEntity extends HangingEntity {
     }
 
     /**
-     * This method will call {@link #deserializeChainTag(CompoundTag)} if the {@link #chainTags} has any tags.
-     * It will also break all connections that are larger than the {@link #getMaxRange()}
+     * Sets the chain type and sends a packet to the client.
+     *
+     * @param chainType The new chain type.
      */
-    private void updateChains() {
-        if (chainTags != null) {
-            ListTag copy = chainTags.copy();
-            for (Tag tag : copy) {
-                assert tag instanceof CompoundTag;
-                this.deserializeChainTag(((CompoundTag) tag));
+    public void updateChainType(ChainType chainType) {
+        this.chainType = chainType;
+
+        if (!level.isClientSide) {
+            S2CKnotChangeTypePacket packet = new S2CKnotChangeTypePacket(getId(), ChainTypesRegistry.getKey(chainType));
+            BlockPos pos = blockPosition();
+            ModPacketHandler.INSTANCE.send(PacketDistributor.NEAR
+                            .with(PacketDistributor.TargetPoint.p(pos.getX(), pos.getY(), pos.getZ(), ChainKnotEntity.VISIBLE_RANGE, level.dimension())),
+                    packet);
+        }
+    }
+
+    /**
+     * Searches for other {@link ChainKnotEntity ChainKnotEntities} that are in range of {@code target} and
+     * have a link to {@code player}.
+     *
+     * @param player the player wo tries to make a connection.
+     * @param target center of the range
+     * @return a list of all held chains that are in range of {@code target}
+     */
+    public static List<ChainLink> getHeldChainsInRange(Player player, BlockPos target) {
+        AABB searchBox = AABB.ofSize(Vec3.atLowerCornerOf(target), getMaxRange() * 2, getMaxRange() * 2, getMaxRange() * 2);
+        List<ChainKnotEntity> otherKnots = player.level.getEntitiesOfClass(ChainKnotEntity.class, searchBox);
+
+        List<ChainLink> attachableLinks = new ArrayList<>();
+
+        for (ChainKnotEntity source : otherKnots) {
+            for (ChainLink link : source.getLinks()) {
+                if (link.secondary != player) continue;
+                // We found a knot that is connected to the player.
+                attachableLinks.add(link);
             }
         }
-
-        Entity[] entitySet = holdingEntities.values().toArray(new Entity[0]).clone();
-        for (Entity entity : entitySet) {
-            if (entity == null) continue;
-            if (!this.isAlive() || !entity.isAlive() || entity.position().distanceToSqr(this.position()) > getMaxRange() * getMaxRange()) {
-                if (entity instanceof ChainKnotEntity knot) {
-                    damageLink(false, knot);
-                    continue;
-                }
-
-                boolean drop = true;
-                if (entity instanceof Player player) {
-                    drop = !player.isCreative();
-                }
-                this.detachChain(entity, true, drop);
-                dropItem(null);
-            }
-        }
+        return attachableLinks;
     }
 
     /**
-     * Get method for all the entities that we are connected to.
-     *
-     * @return ArrayList with Entities - These entities are {@link Player PlayerEntities} or {@link ChainKnotEntity ChainKnotEntities}
+     * @return all complete links that are associated with this knot.
+     * @apiNote Operating on the list has potential for bugs as it does not include incomplete links.
+     * For example {@link ChainLink#create(ChainKnotEntity, Entity, ChainType)} checks if the link already exists
+     * using this list. Same goes for {@link #tryAttachHeldChains(Player)}
+     * but at the end of the day it doesn't really matter.
+     * When an incomplete link is not resolved within the first two ticks it is unlikely to ever complete.
+     * And even if it completes it will be stopped either because the knot is dead or the duplicates check in {@code ChainLink}.
      */
-    public ArrayList<Entity> getHoldingEntities() {
-        if (this.level.isClientSide) {
-            for (Integer id : holdingEntities.keySet()) {
-                if (id != 0 && holdingEntities.get(id) == null) {
-                    holdingEntities.put(id, this.level.getEntity(id));
-                }
-            }
-        }
-        return new ArrayList<>(holdingEntities.values());
+    public List<ChainLink> getLinks() {
+        return links;
     }
 
-    /**
-     * Destroy the collisions between two chains, and delete the endpoint if it doesn't have any other connection.
-     *
-     * @param doNotDrop if we should not drop an item.
-     * @param endChain  the entity that this is connected to.
-     */
-    void damageLink(boolean doNotDrop, ChainKnotEntity endChain) {
-        if (!this.getHoldingEntities().contains(endChain))
-            return; // We cannot destroy a connection that does not exist.
-        if (endChain.holdersCount <= 1 && endChain.getHoldingEntities().isEmpty()) {
-            endChain.remove(RemovalReason.KILLED);
-        }
-        this.deleteCollision(endChain);
-        this.detachChain(endChain, true, !doNotDrop);
-        dropItem(null);
-    }
-
-    /**
-     * This method tries to connect to an entity that is in the {@link #chainTags}.
-     * If they do not exist yet, we skip them. If they do, make a connection and remove it from the tag.
-     * <p>
-     * If when the {@link #tickCount} of this entity is bigger than 100, we remove the tag from the {@link #chainTags}
-     * meaning that we cannot find the connection anymore and we assume that it will not be loaded in the future.
-     *
-     * @param tag the tag that contains a single connection.
-     * @see #updateChains()
-     */
-    private void deserializeChainTag(CompoundTag tag) {
-        if (tag != null && this.level instanceof ServerLevel) {
-            if (tag.contains("UUID")) {
-                UUID uuid = tag.getUUID("UUID");
-                Entity entity = ((ServerLevel) this.level).getEntity(uuid);
-                if (entity != null) {
-                    this.attachChain(entity, true, 0);
-                    this.chainTags.remove(tag);
-                    return;
-                }
-            } else if (tag.contains("X")) {
-                BlockPos blockPos = new BlockPos(tag.getInt("X"), tag.getInt("Y"), tag.getInt("Z"));
-                ChainKnotEntity entity = ChainKnotEntity.getOrCreate(this.level, blockPos, true);
-                if (entity != null) {
-                    this.attachChain(Objects.requireNonNull(ChainKnotEntity.getOrCreate(this.level, blockPos, false)), true, 0);
-                    this.chainTags.remove(tag);
-                }
-                return;
-            }
-
-            // At the start the server and client need to tell each other the info.
-            // So we need to check if the object is old enough for these things to exist before we delete them.
-            if (this.tickCount > 100) {
-                this.spawnAtLocation(Items.CHAIN);
-                this.chainTags.remove(tag);
-            }
-        }
-    }
-
-    /**
-     * Attach this chain to an entity.
-     *
-     * @param entity             The entity to connect to.
-     * @param sendPacket         Whether we send a packet to the client.
-     * @param fromPlayerEntityId the entityID of the player that this connects to. 0 if it is a chainKnot.
-     * @return Returns false if the entity already has a connection with us or vice versa.
-     */
-    public boolean attachChain(Entity entity, boolean sendPacket, int fromPlayerEntityId) {
-        if (this.holdingEntities.containsKey((entity.getId()))) {
-            return false;
-        }
-        if (entity instanceof ChainKnotEntity knot && knot.holdingEntities.containsKey(this.getId())) {
-            return false;
-        }
-
-        this.holdingEntities.put(entity.getId(), entity);
-
-        if (fromPlayerEntityId != 0) {
-            removePlayerWithId(fromPlayerEntityId);
-        }
-
-        if (!this.level.isClientSide && sendPacket && this.level instanceof ServerLevel) {
-            if (entity instanceof ChainKnotEntity) {
-                ((ChainKnotEntity) entity).holdersCount++;
-                createCollision(entity);
-            }
-            sendAttachChainPacket(entity.getId(), fromPlayerEntityId);
-        }
-        return true;
-    }
-
-    /**
-     * Remove a link between this chainKnot and a player or other chainKnot.
-     *
-     * @param entity     the entity it is connected to.
-     * @param sendPacket should we send a packet to the client?
-     * @param dropItem   should we drop an item?
-     */
-    public void detachChain(Entity entity, boolean sendPacket, boolean dropItem) {
-        if (entity == null) return;
-
-        this.holdingEntities.remove(entity.getId());
-        if (!this.level.isClientSide && dropItem && this.level.getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
-            Vec3 middle = Helper.middleOf(position(), entity.position());
-            ItemEntity entity1 = new ItemEntity(level, middle.x, middle.y, middle.z, new ItemStack(Items.CHAIN));
-            entity1.setDefaultPickUpDelay();
-            this.level.addFreshEntity(entity1);
-        }
-
-        if (!this.level.isClientSide() && sendPacket && this.level instanceof ServerLevel) {
-            if (entity instanceof ChainKnotEntity) {
-                ((ChainKnotEntity) entity).holdersCount--;
-            }
-            if (this.holdersCount <= 0 && getHoldingEntities().isEmpty()) {
-                this.remove(RemovalReason.DISCARDED);
-            }
-            deleteCollision(entity);
-            sendDetachChainPacket(entity.getId());
-        }
-    }
-
-    /**
-     * Create a collision between this and an entity.
-     * It spawns multiple {@link ChainCollisionEntity ChainCollisionEntities} that are equal distance from each other.
-     * Position is the same no matter what if the connection is from A -> B or A <- B.
-     *
-     * @param entity the entity to create collisions too.
-     * @see ChainCollisionEntity
-     */
-    private void createCollision(Entity entity) {
-        //Safety check!
-        if (COLLISION_STORAGE.containsKey(entity.getId())) return;
-
-        double distance = this.distanceTo(entity);
-        double step = COLLIDER_SPACING * Math.sqrt(Math.pow(ModEntityTypes.CHAIN_COLLISION.get().getWidth(), 2) * 2) / distance;
-        double v = step;
-        double centerHoldout = ModEntityTypes.CHAIN_COLLISION.get().getWidth() / distance;
-
-        ArrayList<Integer> entityIdList = new ArrayList<>();
-        while (v < 0.5 - centerHoldout) {
-            Entity collider1 = spawnCollision(false, this, entity, v);
-            if (collider1 != null) entityIdList.add(collider1.getId());
-            Entity collider2 = spawnCollision(true, this, entity, v);
-            if (collider2 != null) entityIdList.add(collider2.getId());
-
-            v += step;
-        }
-
-        Entity centerCollider = spawnCollision(false, this, entity, 0.5);
-        if (centerCollider != null) entityIdList.add(centerCollider.getId());
-
-        this.COLLISION_STORAGE.put(entity.getId(), entityIdList);
-    }
-
-    /**
-     * Spawns a collider at v percent between entity1 and entity2
-     *
-     * @param reverse Reverse start and end
-     * @param start   the entity at v=0
-     * @param end     the entity at v=1
-     * @param v       percent of the distance
-     * @return {@link ChainCollisionEntity} or null
-     */
-    @Nullable
-    private Entity spawnCollision(boolean reverse, Entity start, Entity end, double v) {
-        Vec3 startPos = start.position().add(start.getLeashOffset());
-        Vec3 endPos = end.position().add(end.getLeashOffset());
-
-        Vec3 tmp = endPos;
-        if (reverse) {
-            endPos = startPos;
-            startPos = tmp;
-        }
-
-        Vector3f offset = Helper.getChainOffset(startPos, endPos);
-        startPos = startPos.add(offset.x(), 0, offset.z());
-        endPos = endPos.add(-offset.x(), 0, -offset.z());
-
-        double distance = startPos.distanceTo(endPos);
-
-        double x = Mth.lerp(v, startPos.x, endPos.x);
-        double y = startPos.y + Helper.drip2((v * distance), distance, endPos.y - startPos.y);
-        double z = Mth.lerp(v, startPos.z, endPos.z);
-
-        y += -ModEntityTypes.CHAIN_COLLISION.get().getHeight() + 1 / 16f;
-
-        ChainCollisionEntity c = new ChainCollisionEntity(this.level, x, y, z, start.getId(), end.getId());
-        if (level.addFreshEntity(c)) {
-            return c;
-        } else {
-            ConnectibleChains.LOGGER.warn("Tried to summon collision entity for a chain, failed to do so");
-            return null;
-        }
-    }
-
-    /**
-     * Remove a collision between this and an entity.
-     *
-     * @param entity the entity in question.
-     */
-    private void deleteCollision(Entity entity) {
-        int entityId = entity.getId();
-        ArrayList<Integer> entityIdList = this.COLLISION_STORAGE.get(entityId);
-        if (entityIdList != null) {
-            entityIdList.forEach(id -> {
-                Entity e = level.getEntity(id);
-                if (e instanceof ChainCollisionEntity) {
-                    e.remove(RemovalReason.DISCARDED);
-                }
-            });
-        }
-        this.COLLISION_STORAGE.remove(entityId);
-    }
-
-    /**
-     * Get or create a chainKnot in a location.
-     *
-     * @param world      the world.
-     * @param pos        the location to check.
-     * @param hasToExist boolean that specifies if the chainKnot has to exist, if this is true and we cannot find
-     *                   a knot, it will return null.
-     * @return {@link ChainKnotEntity} or null
-     */
-    @Nullable
-    public static ChainKnotEntity getOrCreate(Level world, BlockPos pos, Boolean hasToExist) {
-        int posX = pos.getX();
-        int posY = pos.getY();
-        int posZ = pos.getZ();
-        final List<ChainKnotEntity> list = world.getEntitiesOfClass(ChainKnotEntity.class,
-                new AABB((double) posX - 1.0D, (double) posY - 1.0D, (double) posZ - 1.0D,
-                        (double) posX + 1.0D, (double) posY + 1.0D, (double) posZ + 1.0D));
-        Iterator<ChainKnotEntity> iterator = list.iterator();
-
-        ChainKnotEntity surroundingChains;
-        do {
-            if (!iterator.hasNext()) {
-                if (hasToExist) {
-                    // If it has to exist and it doesn't, we return null.
-                    return null;
-                }
-                ChainKnotEntity newChain = new ChainKnotEntity(world, pos);
-                world.addFreshEntity(newChain);
-                newChain.playPlacementSound();
-                return newChain;
-            }
-
-            surroundingChains = iterator.next();
-        } while (surroundingChains == null || !surroundingChains.getPos().equals(pos));
-
-        return surroundingChains;
-    }
-
-    /**
-     * Send to all players around that this chain wants to attach to another entity.
-     *
-     * @param entityId           the entity to connect to.
-     * @param fromPlayerEntityId the {@link Player} id that made the connection.
-     */
-    private void sendAttachChainPacket(int entityId, int fromPlayerEntityId) {
-        S2CChainAttachPacket packet = new S2CChainAttachPacket(fromPlayerEntityId, new int[]{this.getId(), entityId});
-        ModPacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY.with(() -> this), packet);
-    }
-
-    /**
-     * Send a package to all the clients around this entity that specifies it want's to detach.
-     *
-     * @param entityId the entity id that it wants to connect to.
-     */
-    private void sendDetachChainPacket(int entityId) {
-        assert !this.level.isClientSide();
-        S2CChainDetachPacket packet = new S2CChainDetachPacket(new int[]{this.getId(), entityId});
-        ModPacketHandler.INSTANCE.send(PacketDistributor.TRACKING_ENTITY.with(() -> this), packet);
-    }
-
-    /**
-     * Remove a player id from the {@link #holdingEntities list}
-     *
-     * @param playerId the id of the player.
-     */
-    private void removePlayerWithId(int playerId) {
-        this.holdingEntities.remove(playerId);
-    }
-
-    @Override
-    public boolean shouldRenderAtSqrDistance(double distance) {
-        return distance < VISIBLE_RANGE;
-    }
-
-    @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
-        if (this.level.isClientSide) {
-            return InteractionResult.SUCCESS;
-        } else {
-            boolean madeConnection = tryAttachHeldChainsToBlock(player, level, getPos(), this);
-
-            if (!madeConnection) {
-                if (this.getHoldingEntities().contains(player)) {
-                    dropItem(null);
-                    detachChain(player, true, false);
-                    if (!player.isCreative()) {
-                        player.addItem(new ItemStack(Items.CHAIN));
-                    }
-                } else if (player.getItemInHand(hand).getItem().equals(Items.CHAIN)) {
-                    playPlacementSound();
-                    attachChain(player, true, 0);
-                    if (!player.isCreative()) {
-                        player.getItemInHand(hand).shrink(1);
-                    }
-                } else {
-                    hurt(DamageSource.playerAttack(player), 0);
-                }
-            } else {
-                playPlacementSound();
-            }
-
-            return InteractionResult.CONSUME;
-        }
-    }
-
-    @Override
-    protected float getEyeHeight(Pose pPose, EntityDimensions pSize) {
-        return -0.0625F;
-    }
 
     @Override
     public Packet<?> getAddEntityPacket() {
@@ -726,58 +698,34 @@ public class ChainKnotEntity extends HangingEntity {
     }
 
     @Override
-    public Vec3 getLeashOffset() {
-        return new Vec3(0, 5 / 16f, 0);
+    public void writeSpawnData(FriendlyByteBuf buffer) {
+        buffer.writeResourceLocation(ChainTypesRegistry.getKey(chainType));
     }
 
     @Override
-    public Vec3 getRopeHoldPosition(float pPartialTicks) {
-        return this.getPosition(pPartialTicks).add(0.0D, 5 / 16f, 0.0D);
+    public void readSpawnData(FriendlyByteBuf additionalData) {
+        ResourceLocation chainTypeID = additionalData.readResourceLocation();
+        this.setChainType(ChainTypesRegistry.getValue(chainTypeID));
+        this.setGraceTicks((byte) 0);
     }
 
     /**
-     * Client method to keep track of all the entities that it holds.
-     * Adds an id that it holds, removes the player id if applicable.
+     * Checks if the knot model of the knot entity should be rendered.
+     * To determine if the knot entity including chains should be rendered use {@link #shouldRenderAtSqrDistance(double)}
      *
-     * @param id           the id that we connect to.
-     * @param fromPlayerId the id from the player it was from, 0 if this was not applicable.
-     * @see S2CChainAttachPacket
+     * @return true if the knot is not attached to a wall.
      */
-    @OnlyIn(Dist.CLIENT)
-    public void addHoldingEntityId(int id, int fromPlayerId) {
-        if (fromPlayerId != 0) {
-            this.holdingEntities.remove(fromPlayerId);
-        }
-        this.holdingEntities.put(id, null);
+    public boolean shouldRenderKnot() {
+        return attachTarget == null || !attachTarget.is(BlockTags.WALLS);
     }
 
-    /**
-     * Client method to keep track of all the entities that it holds.
-     * Removes a id that it holds.
-     *
-     * @param id the id that we do not connect to anymore.
-     * @see S2CChainDetachPacket
-     */
-    @OnlyIn(Dist.CLIENT)
-    public void removeHoldingEntityId(int id) {
-        this.holdingEntities.remove(id);
-    }
-
-    /**
-     * Multiple version of {@link #addHoldingEntityId(int id, int playerFromId)}
-     * This version does not have a playerFromId, since this only is called when the world is loaded and
-     * all previous connection need to be remade.
-     *
-     * @param ids array of ids to connect to.
-     * @see com.lilypuree.connectiblechains.mixin.server.world.ChunkMapMixin
-     */
-    @OnlyIn(Dist.CLIENT)
-    public void addHoldingEntityIds(int[] ids) {
-        for (int id : ids) this.holdingEntities.put(id, null);
+    public void addLink(ChainLink link) {
+        links.add(link);
     }
 
     @Override
     public ItemStack getPickedResult(HitResult target) {
-        return new ItemStack(Items.CHAIN);
+        return new ItemStack(chainType.item());
     }
+
 }

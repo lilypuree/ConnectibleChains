@@ -19,6 +19,7 @@ package com.lilypuree.connectiblechains.mixin.server.world;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import com.lilypuree.connectiblechains.network.ModPacketHandler;
 import com.lilypuree.connectiblechains.network.S2CMultiChainAttachPacket;
+import com.lilypuree.connectiblechains.util.PacketCreator;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.level.ChunkMap;
@@ -37,6 +38,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Mixin is used to keep track of the connections when the ChainKnot is loaded again.
+ * <p>
+ * If we do not do this, the client does not know about connections that are loaded in new chunks.
+ *
+ * @author legoatoom
+ */
 @Mixin(ChunkMap.class)
 public class ChunkMapMixin {
 
@@ -49,26 +57,23 @@ public class ChunkMapMixin {
             at = @At(value = "TAIL")
     )
     private void sendAttachChainPackets(ServerPlayer player, MutableObject<ClientboundLevelChunkWithLightPacket> cachedDataPacket, LevelChunk chunk, CallbackInfo ci) {
-        List<ChainKnotEntity> list = new ArrayList<>();
+        List<ChainKnotEntity> knots = new ArrayList<>();
 
-        for(ChunkMap.TrackedEntity entityTracker : this.entityMap.values()){
+        var trackers = this.entityMap.values().iterator();
+        while (trackers.hasNext()) {
+            ChunkMap.TrackedEntity entityTracker = trackers.next();
             Entity entity = entityTracker.entity;
             if (entity != player && entity.chunkPosition().equals(chunk.getPos())) {
-                if (entity instanceof ChainKnotEntity && !((ChainKnotEntity) entity).getHoldingEntities().isEmpty()) {
-                    list.add((ChainKnotEntity) entity);
+                if (entity instanceof ChainKnotEntity && !((ChainKnotEntity) entity).getLinks().isEmpty()) {
+                    knots.add((ChainKnotEntity) entity);
                 }
             }
         }
 
-
-        if (!list.isEmpty()) {
-            for (ChainKnotEntity chainKnotEntity : list) {
-                //Write our id and the id of the one we connect to.
-                int[] ids = chainKnotEntity.getHoldingEntities().stream().mapToInt(Entity::getId).toArray();
-                if (ids.length > 0) {
-                    S2CMultiChainAttachPacket packet = new S2CMultiChainAttachPacket(chainKnotEntity.getId(), ids);
-                    ModPacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet);
-                }
+        for (ChainKnotEntity knot : knots) {
+            S2CMultiChainAttachPacket packet = PacketCreator.createMultiAttach(knot);
+            if (packet != null) {
+                ModPacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet);
             }
         }
     }
