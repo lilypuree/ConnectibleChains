@@ -56,7 +56,6 @@ public abstract class NbtFixer {
             if (entry.getKey() <= currentVersion) continue;
             for (NamedFix namedFix : entry.getValue()) {
                 try {
-                    ConnectibleChains.LOGGER.info("Trying to apply fix for entity. Wish me luck :)");
                     nbt = namedFix.fix.apply(nbt);
                 } catch (Exception e) {
                     ConnectibleChains.LOGGER.error("During fix '{}' for '{}': ", namedFix.name, nbt, e);
