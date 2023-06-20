@@ -25,9 +25,6 @@ import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import com.lilypuree.connectiblechains.util.Helper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Matrix4f;
-import com.mojang.math.Quaternion;
-import com.mojang.math.Vector3f;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -46,6 +43,9 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.util.List;
 
@@ -178,7 +178,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         Vec3 dstPos;
 
         if (toEntity instanceof HangingEntity) {
-            dstPos = toEntity.position().add(toEntity.getLeashOffset());
+            dstPos = toEntity.position().add(toEntity.getLeashOffset(0));
         } else {
             dstPos = toEntity.getRopeHoldPosition(tickDelta);
         }
@@ -203,8 +203,8 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         matrices.translate(offset.x(), 0, offset.z());
 
         // Now we gather light information for the chain. Since the chain is lighter if there is more light.
-        BlockPos blockPosOfStart = new BlockPos(fromEntity.getEyePosition(tickDelta));
-        BlockPos blockPosOfEnd = new BlockPos(toEntity.getEyePosition(tickDelta));
+        BlockPos blockPosOfStart = BlockPos.containing(fromEntity.getEyePosition(tickDelta));
+        BlockPos blockPosOfEnd = BlockPos.containing(toEntity.getEyePosition(tickDelta));
         int blockLightLevelOfStart = fromEntity.level.getBrightness(LightLayer.BLOCK, blockPosOfStart);
         int blockLightLevelOfEnd = toEntity.level.getBrightness(LightLayer.BLOCK, blockPosOfEnd);
         int skylightLevelOfStart = fromEntity.level.getBrightness(LightLayer.SKY, blockPosOfStart);
@@ -215,7 +215,8 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         Vector3f chainVec = new Vector3f((float) (endPos.x - startPos.x), (float) (endPos.y - startPos.y), (float) (endPos.z - startPos.z));
 
         float angleY = -(float) Math.atan2(chainVec.z(), chainVec.x());
-        matrices.mulPose(Quaternion.fromXYZ(0, angleY, 0));
+        matrices.mulPose(new Quaternionf().rotateXYZ(0, angleY, 0));
+
 
         if (toEntity instanceof HangingEntity) {
             ChainRenderer.BakeKey key = new ChainRenderer.BakeKey(fromEntity.position(), toEntity.position());

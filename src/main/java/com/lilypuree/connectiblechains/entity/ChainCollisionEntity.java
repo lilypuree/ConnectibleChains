@@ -21,6 +21,7 @@ import com.lilypuree.connectiblechains.client.ClientInitializer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -127,7 +128,7 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
     @Override
     public boolean skipAttackInteraction(Entity attacker) {
         if (attacker instanceof Player playerEntity) {
-            return this.hurt(DamageSource.playerAttack(playerEntity), 0.0F);
+            return this.hurt(this.damageSources().playerAttack(playerEntity), 0.0F);
         } else {
             playSound(SoundEvents.CHAIN_HIT, 0.5F, 1.0F);
         }
@@ -163,9 +164,10 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
     }
 
     @Override
-    public Packet<?> getAddEntityPacket() {
+    public Packet<ClientGamePacketListener> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
+
 
     @Override
     public void writeSpawnData(FriendlyByteBuf buffer) {

@@ -8,7 +8,6 @@ import com.lilypuree.connectiblechains.network.ModPacketHandler;
 import com.lilypuree.connectiblechains.network.S2CChainAttachPacket;
 import com.lilypuree.connectiblechains.network.S2CChainDetachPacket;
 import com.lilypuree.connectiblechains.util.Helper;
-import com.mojang.math.Vector3f;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.Vec3i;
@@ -27,6 +26,8 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -46,7 +47,6 @@ public class ChainLink {
      * A value of 1 means they are "shoulder to shoulder"
      */
     private static final float COLLIDER_SPACING = 1.5f;
-
     /**
      * The de facto owner of this link. It is responsive for managing the link and keeping track of it across saves.
      */
@@ -169,8 +169,8 @@ public class ChainLink {
     @Nullable
     private Entity spawnCollision(boolean reverse, Entity start, Entity end, double v) {
         assert primary.level instanceof ServerLevel;
-        Vec3 startPos = start.position().add(start.getLeashOffset());
-        Vec3 endPos = end.position().add(end.getLeashOffset());
+        Vec3 startPos = start.position().add(start.getLeashOffset(0));
+        Vec3 endPos = end.position().add(end.getLeashOffset(0));
 
         Vec3 tmp = endPos;
         if (reverse) {

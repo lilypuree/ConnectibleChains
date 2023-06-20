@@ -1,9 +1,10 @@
 package com.lilypuree.connectiblechains.util;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
-import com.mojang.math.Vector3f;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class Helper {
     public static ResourceLocation identifier(String name) {
@@ -88,10 +89,10 @@ public class Helper {
      * @return the x/z offset
      */
     public static Vector3f getChainOffset(Vec3 start, Vec3 end) {
-        Vector3f offset = new Vector3f(end.subtract(start));
+        Vector3f offset = end.subtract(start).toVector3f();
         offset.set(offset.x(), 0, offset.z());
         offset.normalize();
-        offset.mul(2 / 16f);
+        offset.normalize(2 / 16f);
         return offset;
     }
 }
