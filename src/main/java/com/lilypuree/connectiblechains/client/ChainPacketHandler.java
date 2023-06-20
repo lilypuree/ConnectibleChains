@@ -2,8 +2,6 @@ package com.lilypuree.connectiblechains.client;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.chain.ChainLink;
-import com.lilypuree.connectiblechains.chain.ChainType;
-import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import com.lilypuree.connectiblechains.chain.IncompleteChainLink;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -11,7 +9,9 @@ import it.unimi.dsi.fastutil.objects.ObjectList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.List;
 
@@ -26,9 +26,9 @@ public class ChainPacketHandler {
     /**
      * Will create links from the entity with the id {@code fromId} to multiple targets.
      *
-     * @param fromId Primary entity id
-     * @param toIds  Secondary entity ids
-     * @param typeIds  Link type raw ids
+     * @param fromId  Primary entity id
+     * @param toIds   Secondary entity ids
+     * @param typeIds Link type raw ids
      */
     public void createLinks(int fromId, int[] toIds, List<ResourceLocation> typeIds) {
         Minecraft client = Minecraft.getInstance();
@@ -37,7 +37,7 @@ public class ChainPacketHandler {
         if (from instanceof ChainKnotEntity knot) {
             for (int i = 0; i < toIds.length; i++) {
                 Entity to = client.level.getEntity(toIds[i]);
-                ChainType chainType = ChainTypesRegistry.getValue(typeIds.get(i));
+                Item chainType = ForgeRegistries.ITEMS.getValue(typeIds.get(i));
                 if (to == null) {
                     incompleteLinks.add(new IncompleteChainLink(knot, toIds[i], chainType));
                 } else {
@@ -74,9 +74,9 @@ public class ChainPacketHandler {
         }
     }
 
-    public void changeKnotType(int knotId, ResourceLocation typeId){
+    public void changeKnotType(int knotId, ResourceLocation typeId) {
         Entity entity = Minecraft.getInstance().level.getEntity(knotId);
-        ChainType chainType = ChainTypesRegistry.getValue(typeId);
+        Item chainType = ForgeRegistries.ITEMS.getValue(typeId);
         if (entity instanceof ChainKnotEntity knot) {
             knot.updateChainType(chainType);
         } else {

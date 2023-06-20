@@ -1,10 +1,8 @@
 package com.lilypuree.connectiblechains.datafixer;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
-import com.mojang.math.Constants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 
 import java.util.*;
@@ -58,6 +56,7 @@ public abstract class NbtFixer {
             if (entry.getKey() <= currentVersion) continue;
             for (NamedFix namedFix : entry.getValue()) {
                 try {
+                    ConnectibleChains.LOGGER.info("Trying to apply fix for entity. Wish me luck :)");
                     nbt = namedFix.fix.apply(nbt);
                 } catch (Exception e) {
                     ConnectibleChains.LOGGER.error("During fix '{}' for '{}': ", namedFix.name, nbt, e);
@@ -70,7 +69,7 @@ public abstract class NbtFixer {
      * Returns the current data format version.
      * The lowest two digits are for the patch level.
      * The next two are for minor versions.
-     * The rest are fore major versions.
+     * The rest are for major versions.
      */
     protected abstract int getVersion();
 

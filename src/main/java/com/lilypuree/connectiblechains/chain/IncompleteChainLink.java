@@ -2,6 +2,7 @@ package com.lilypuree.connectiblechains.chain;
 
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Item;
 
 /**
  * Due to the asynchronous nature of networking an attach- or detach-packet cann arrive before the secondary exists.
@@ -18,19 +19,18 @@ public class IncompleteChainLink {
      * @see ChainLink#primary
      */
     public final int secondaryId;
-    /**
-     * @see ChainLink#chainType
-     */
-    public final ChainType chainType;
+
+
+    public final Item sourceItem;
     /**
      * Whether the link exists and is active
      */
     private boolean alive = true;
 
-    public IncompleteChainLink(ChainKnotEntity primary, int secondaryId, ChainType chainType) {
+    public IncompleteChainLink(ChainKnotEntity primary, int secondaryId, Item sourceItem) {
         this.primary = primary;
         this.secondaryId = secondaryId;
-        this.chainType = chainType;
+        this.sourceItem = sourceItem;
     }
 
     /**
@@ -42,7 +42,7 @@ public class IncompleteChainLink {
         if (isDead()) return true;
         Entity secondary = primary.level.getEntity(secondaryId);
         if (secondary == null) return false;
-        ChainLink.create(primary, secondary, chainType);
+        ChainLink.create(primary, secondary, sourceItem);
         return true;
     }
 

@@ -12,7 +12,7 @@ buildscript {
     }
 }
 
-plugins{
+plugins {
     id "com.matthewprenger.cursegradle" version "$cursegradle_version"
 }
 
@@ -59,28 +59,34 @@ minecraft {
     }
 }
 
-repositories{
-    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+repositories {
     maven {
-        // location of the maven that hosts JEI files
-        name = "Progwml6 maven"
+        // location of the maven that hosts JEI files before January 2023
+        name = "Progwml6's maven"
         url = "https://dvs1.progwml6.com/files/maven/"
+    }
+    maven {
+        // location of the maven that hosts JEI files since January 2023
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
     }
     maven {
         // location of a maven mirror for JEI files, as a fallback
         name = "ModMaven"
-        url = "https://modmaven.k-4u.nl"
+        url = "https://modmaven.dev"
     }
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    annotationProcessor 'org.spongepowered:mixin:0.8.4-SNAPSHOT:processor'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
-    // compile against the JEI API but do not include it at runtime
-    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}:${jei_version}:api")
-    // at runtime, use the full JEI jar
-    runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}:${jei_version}")
+
+  // compile against the JEI API but do not include it at runtime
+  compileOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"))
+  compileOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"))
+  // at runtime, use the full JEI jar for Forge
+  runtimeOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}"))
 }
 
 mixin {

@@ -17,8 +17,6 @@
 package com.lilypuree.connectiblechains.entity;
 
 import com.lilypuree.connectiblechains.chain.ChainLink;
-import com.lilypuree.connectiblechains.chain.ChainType;
-import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import com.lilypuree.connectiblechains.client.ClientInitializer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -30,11 +28,14 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.entity.IEntityAdditionalSpawnData;
 import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,7 +57,7 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
     /**
      * On the client only the chainType information is present, for the pick item action mostly
      */
-    private ChainType chainType;
+    private Item sourceItem;
 
 
     public ChainCollisionEntity(EntityType<?> pEntityType, Level pLevel) {
@@ -73,12 +74,12 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
         return link;
     }
 
-    public ChainType getChainType() {
-        return chainType;
+    public Item getSourceItem() {
+        return sourceItem;
     }
 
-    public void setChainType(ChainType chainType) {
-        this.chainType = chainType;
+    public void setSourceItem(Item sourceItem) {
+        this.sourceItem = sourceItem;
     }
 
     @Override
@@ -168,13 +169,12 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
 
     @Override
     public void writeSpawnData(FriendlyByteBuf buffer) {
-        ChainType chainType = link == null ? ChainTypesRegistry.DEFAULT_CHAIN_TYPE: link.chainType;
-        buffer.writeResourceLocation(ChainTypesRegistry.getKey(chainType));
+        buffer.writeResourceLocation(ForgeRegistries.ITEMS.getKey(link == null ? Items.CHAIN : link.sourceItem));
     }
 
     @Override
     public void readSpawnData(FriendlyByteBuf additionalData) {
-        this.setChainType(ChainTypesRegistry.getValue(additionalData.readResourceLocation()));
+        this.setSourceItem(ForgeRegistries.ITEMS.getValue(additionalData.readResourceLocation()));
     }
 
     @Override
@@ -193,6 +193,6 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
 
     @Override
     public ItemStack getPickedResult(HitResult target) {
-        return new ItemStack(chainType.item());
+        return new ItemStack(sourceItem);
     }
 }

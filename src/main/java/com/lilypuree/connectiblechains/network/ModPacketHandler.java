@@ -25,25 +25,25 @@ public class ModPacketHandler {
         INSTANCE.messageBuilder(S2CChainAttachPacket.class, nextID())
                 .encoder(S2CChainAttachPacket::toBytes)
                 .decoder(S2CChainAttachPacket::new)
-                .consumer(S2CChainAttachPacket::handle)
+                .consumerNetworkThread(S2CChainAttachPacket::handle)
                 .add();
 
         INSTANCE.messageBuilder(S2CChainDetachPacket.class, nextID())
                 .encoder(S2CChainDetachPacket::toBytes)
                 .decoder(S2CChainDetachPacket::new)
-                .consumer(S2CChainDetachPacket::handle)
+                .consumerNetworkThread(S2CChainDetachPacket::handle)
                 .add();
 
         INSTANCE.messageBuilder(S2CMultiChainAttachPacket.class, nextID())
                 .encoder(S2CMultiChainAttachPacket::toBytes)
                 .decoder(S2CMultiChainAttachPacket::new)
-                .consumer(S2CMultiChainAttachPacket::handle)
+                .consumerNetworkThread(S2CMultiChainAttachPacket::handle)
                 .add();
 
         INSTANCE.messageBuilder(S2CKnotChangeTypePacket.class, nextID())
                 .encoder(S2CKnotChangeTypePacket::toBytes)
                 .decoder(S2CKnotChangeTypePacket::new)
-                .consumer(S2CKnotChangeTypePacket::handle)
+                .consumerNetworkThread(S2CKnotChangeTypePacket::handle)
                 .add();
 
     }
