@@ -37,7 +37,6 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.HangingEntity;
@@ -116,9 +115,9 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
             matrices.pushPose();
             // F stands for "from", T for "to"
-            Component holdingCount = new TextComponent("F: " + chainKnotEntity.getLinks().stream()
+            Component holdingCount = Component.literal("F: " + chainKnotEntity.getLinks().stream()
                     .filter(l -> l.primary == chainKnotEntity).count());
-            Component heldCount = new TextComponent("T: " + chainKnotEntity.getLinks().stream()
+            Component heldCount = Component.literal("T: " + chainKnotEntity.getLinks().stream()
                     .filter(l -> l.secondary == chainKnotEntity).count());
             matrices.translate(0, 0.25, 0);
             this.renderNameTag(chainKnotEntity, holdingCount, matrices, vertexConsumers, light);

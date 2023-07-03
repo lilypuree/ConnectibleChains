@@ -47,7 +47,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
@@ -135,6 +137,9 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     }
 
     public ChainType getChainType() {
+        if(chainType == null) {
+            chainType = new ChainType(Items.CHAIN);
+        }
         return chainType;
     }
 

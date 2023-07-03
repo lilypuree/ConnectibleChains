@@ -3,22 +3,21 @@ package com.lilypuree.connectiblechains.chain;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.util.Helper;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.*;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
+import net.minecraftforge.registries.RegistryBuilder;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import static com.lilypuree.connectiblechains.compat.BuiltinCompat.BUILTIN_TYPES;
-import static com.lilypuree.connectiblechains.compat.BuiltinCompat.registerTypeForBuiltin;
-
-@Mod.EventBusSubscriber(modid = ConnectibleChains.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ChainTypesRegistry {
 
     public static ResourceLocation getKey(ChainType type) {
@@ -38,39 +37,25 @@ public class ChainTypesRegistry {
     }
 
     public static final ResourceLocation DEFAULT_CHAIN_TYPE_ID = Helper.identifier("iron_chain");
-    public static ChainType DEFAULT_CHAIN_TYPE;
+    public static ChainType DEFAULT_CHAIN_TYPE = new ChainType(Items.CHAIN);
     @SuppressWarnings("unused")
     public static ChainType IRON_CHAIN;
 
+    public static final ResourceKey<Registry<ChainType>> CHAIN_TYPE_KEY = ResourceKey.createRegistryKey(new ResourceLocation(ConnectibleChains.MODID, "chains"));
+    public static final DeferredRegister<ChainType> CHAINS = DeferredRegister.create(CHAIN_TYPE_KEY, ConnectibleChains.MODID);
+    public static final Supplier<IForgeRegistry<ChainType>> REGISTRY = CHAINS.makeRegistry(() -> new RegistryBuilder<ChainType>()
+            .setName(new ResourceLocation(ConnectibleChains.MODID, "chain_types"))
+            .setDefaultKey(DEFAULT_CHAIN_TYPE_ID));
     public static final Map<Item, ChainType> ITEM_CHAIN_TYPES = new Object2ObjectOpenHashMap<>(64);
 
     //---------------------------------------------------------------------------------
 
-    private static Supplier<IForgeRegistry<ChainType>> REGISTRY;
-
-    @SubscribeEvent
-    public static void onNewRegistry(NewRegistryEvent event) {
-        RegistryBuilder<ChainType> registryBuilder = new RegistryBuilder<>();
-        registryBuilder.setName(new ResourceLocation(ConnectibleChains.MODID, "chain_types"))
-                .setType(ChainType.class)
-                .setDefaultKey(DEFAULT_CHAIN_TYPE_ID);
-        REGISTRY = event.create(registryBuilder);
-    }
-
-    @SubscribeEvent
-    public static void onRegistry(RegistryEvent.Register<ChainType> event) {
-        IRON_CHAIN = DEFAULT_CHAIN_TYPE = register(DEFAULT_CHAIN_TYPE_ID.getPath(), Items.CHAIN);
-        event.getRegistry().register(IRON_CHAIN);
-//        for (ResourceLocation itemId : BUILTIN_TYPES) {
-//            registerTypeForBuiltin(itemId);
-//        }
-    }
-
-    private static ChainType register(String id, Item item) {
-        ChainType chainType = new ChainType(item).setRegistryName(Helper.identifier(id));
+    public static ChainType register(String id, Item item) {
+        ChainType chainType = new ChainType(item);
         ITEM_CHAIN_TYPES.put(item, chainType);
         return chainType;
     }
+
 
     /**
      * Used to register chain types on initialization. Cannot register a type twice.
@@ -88,14 +73,13 @@ public class ChainTypesRegistry {
         if (REGISTRY.get().containsKey(id)) {
             return REGISTRY.get().getValue(id);
         }
-        ChainType chainType = new ChainType(item).setRegistryName(id);
+        ChainType chainType = new ChainType(item);
         ITEM_CHAIN_TYPES.put(item, chainType);
         return chainType;
     }
 
 
-    @SuppressWarnings("EmptyMethod")
-    public static void init() {
-        // Static fields are now initialized
+    public static void init(IEventBus bus) {
+        CHAINS.register(bus);
     }
 }

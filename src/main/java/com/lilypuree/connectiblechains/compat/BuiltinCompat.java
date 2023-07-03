@@ -1,9 +1,7 @@
 package com.lilypuree.connectiblechains.compat;
 
-import com.lilypuree.connectiblechains.chain.ChainType;
 import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.HashSet;
