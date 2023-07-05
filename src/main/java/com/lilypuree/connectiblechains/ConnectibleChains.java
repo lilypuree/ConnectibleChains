@@ -42,8 +42,7 @@ public class ConnectibleChains {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
 
         ModEntityTypes.register();
-        ChainTypesRegistry.init(bus);
-        ChainTypesRegistry.IRON_CHAIN = ChainTypesRegistry.DEFAULT_CHAIN_TYPE = ChainTypesRegistry.register(ChainTypesRegistry.DEFAULT_CHAIN_TYPE_ID.toString(), Items.CHAIN);
+        ChainTypesRegistry.init();
         BuiltinCompat.init();
 
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);

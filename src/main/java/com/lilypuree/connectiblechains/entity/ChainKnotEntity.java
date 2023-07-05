@@ -137,9 +137,6 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     }
 
     public ChainType getChainType() {
-        if(chainType == null) {
-            chainType = new ChainType(Items.CHAIN);
-        }
         return chainType;
     }
 

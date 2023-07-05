@@ -20,6 +20,7 @@ package com.lilypuree.connectiblechains.client.render.entity;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.chain.ChainLink;
 import com.lilypuree.connectiblechains.chain.ChainType;
+import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import com.lilypuree.connectiblechains.client.ClientInitializer;
 import com.lilypuree.connectiblechains.client.render.entity.model.ChainKnotEntityModel;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
@@ -29,6 +30,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Matrix4f;
 import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -97,7 +99,15 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
             matrices.translate(leashOffset.x, leashOffset.y + 6.5 / 16f, leashOffset.z);
             // The model is 6 px wide, but it should be rendered at 5px
             matrices.scale(5 / 6f, 1, 5 / 6f);
-            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainKnotEntity.getChainType().getKnotTexture()));
+            VertexConsumer vertexConsumer;
+
+            //TODO why is getChainType or ChainType always null and ITEM_CHAIN_TYPES always has nothing in it - 0 Objects in Map
+            if(chainKnotEntity.getChainType() == null) {
+                ChainType chainType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(Minecraft.getInstance().player.getItemInHand(Minecraft.getInstance().player.getUsedItemHand()));
+                vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainType.getKnotTexture()));
+            } else {
+                vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainKnotEntity.getChainType().getKnotTexture()));
+            }
             this.model.renderToBuffer(matrices, vertexConsumer, light, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
             matrices.popPose();
         }
