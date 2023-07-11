@@ -104,7 +104,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * The chain type, used for rendering
      */
-    private ChainType chainType = ChainTypesRegistry.DEFAULT_CHAIN_TYPE;
+    private ChainType chainType = ChainTypesRegistry.DEFAULT_CHAIN_TYPE.get();
 
     /**
      * Remaining grace ticks, will be set to 0 when the last incomplete link is removed.
@@ -587,7 +587,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         if (ChainTypesRegistry.ITEM_CHAIN_TYPES.containsKey(handStack.getItem())) {
             // Interacted with a valid chain item, create a new link
             playPlacementSound();
-            ChainType chainType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(handStack.getItem());
+            ChainType chainType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(handStack.getItem()).get();
             ChainLink.create(this, player, chainType);
             if (!player.isCreative()) {
                 player.getItemInHand(hand).shrink(1);

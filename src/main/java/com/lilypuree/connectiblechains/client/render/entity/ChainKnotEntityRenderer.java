@@ -100,14 +100,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
             // The model is 6 px wide, but it should be rendered at 5px
             matrices.scale(5 / 6f, 1, 5 / 6f);
             VertexConsumer vertexConsumer;
-
-            //TODO why is getChainType or ChainType always null and ITEM_CHAIN_TYPES always has nothing in it - 0 Objects in Map
-            if(chainKnotEntity.getChainType() == null) {
-                ChainType chainType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(Minecraft.getInstance().player.getItemInHand(Minecraft.getInstance().player.getUsedItemHand()));
-                vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainType.getKnotTexture()));
-            } else {
-                vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainKnotEntity.getChainType().getKnotTexture()));
-            }
+            vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainKnotEntity.getChainType().getKnotTexture()));
             this.model.renderToBuffer(matrices, vertexConsumer, light, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
             matrices.popPose();
         }

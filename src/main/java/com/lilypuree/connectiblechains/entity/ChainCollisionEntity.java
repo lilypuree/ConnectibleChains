@@ -168,7 +168,7 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
 
     @Override
     public void writeSpawnData(FriendlyByteBuf buffer) {
-        ChainType chainType = link == null ? ChainTypesRegistry.DEFAULT_CHAIN_TYPE: link.chainType;
+        ChainType chainType = link == null ? ChainTypesRegistry.DEFAULT_CHAIN_TYPE.get(): link.chainType;
         buffer.writeResourceLocation(ChainTypesRegistry.getKey(chainType));
     }
 
