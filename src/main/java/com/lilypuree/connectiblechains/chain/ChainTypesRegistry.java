@@ -33,7 +33,7 @@ public class ChainTypesRegistry {
     }
 
     public static ChainType getValue(String id) {
-        return REGISTRY.get().getValue(ResourceLocation.tryParse(id));
+        return getValue(ResourceLocation.tryParse(id));
     }
 
     public static Collection<ResourceLocation> getKeys() {
@@ -44,7 +44,10 @@ public class ChainTypesRegistry {
     public static Supplier<ChainType> DEFAULT_CHAIN_TYPE;
     public static final ResourceKey<Registry<ChainType>> CHAIN_TYPES =  ResourceKey.createRegistryKey(new ResourceLocation(ConnectibleChains.MODID, DEFAULT_CHAIN_TYPE_ID.getPath()));
     public static final DeferredRegister CHAINS = DeferredRegister.create(CHAIN_TYPES, ConnectibleChains.MODID);
-    private static Supplier<IForgeRegistry<ChainType>> REGISTRY = CHAINS.makeRegistry(() -> new RegistryBuilder<>().setName(new ResourceLocation(ConnectibleChains.MODID, "chain_types")).setDefaultKey(DEFAULT_CHAIN_TYPE_ID));
+    private static Supplier<IForgeRegistry<ChainType>> REGISTRY =
+            CHAINS.makeRegistry(() -> new RegistryBuilder<>()
+                    .setName(new ResourceLocation(ConnectibleChains.MODID, "chain_types"))
+                    .setDefaultKey(DEFAULT_CHAIN_TYPE_ID));
     @SuppressWarnings("unused")
     public static Supplier<ChainType> IRON_CHAIN;
 
@@ -55,11 +58,10 @@ public class ChainTypesRegistry {
     @SubscribeEvent
     public static void onNewRegistry(NewRegistryEvent event) {
         IRON_CHAIN = DEFAULT_CHAIN_TYPE = register(DEFAULT_CHAIN_TYPE_ID.getPath(), Items.CHAIN);
-        CHAINS.register("iron_chain", () -> Items.CHAIN);
     }
 
     public static Supplier<ChainType> register(String id, Item item) {
-        Supplier<ChainType> chainType = ()->new ChainType(item);
+        Supplier<ChainType> chainType = CHAINS.register("iron_chain", () -> new ChainType(Items.CHAIN));
         ITEM_CHAIN_TYPES.put(item, chainType);
         return chainType;
     }

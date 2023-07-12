@@ -23,6 +23,7 @@ import com.lilypuree.connectiblechains.chain.ChainType;
 import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import com.lilypuree.connectiblechains.datafixer.ChainKnotFixer;
 import com.lilypuree.connectiblechains.network.ModPacketHandler;
+import com.lilypuree.connectiblechains.network.S2CChainAttachPacket;
 import com.lilypuree.connectiblechains.network.S2CKnotChangeTypePacket;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
@@ -47,9 +48,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
@@ -89,7 +88,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * All links that involve this knot (secondary and primary)
      */
-    private final ObjectList<ChainLink> links = new ObjectArrayList<>();
+    public final ObjectList<ChainLink> links = new ObjectArrayList<>();
 
     /**
      * Links where the 'secondary' might not exist yet. Will be cleared after the grace period.

@@ -90,6 +90,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
     }
 
 
+
     @Override
     public void render(ChainKnotEntity chainKnotEntity, float yaw, float partialTicks, PoseStack matrices, MultiBufferSource vertexConsumers, int light) {
         // Render the knot
@@ -99,15 +100,13 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
             matrices.translate(leashOffset.x, leashOffset.y + 6.5 / 16f, leashOffset.z);
             // The model is 6 px wide, but it should be rendered at 5px
             matrices.scale(5 / 6f, 1, 5 / 6f);
-            VertexConsumer vertexConsumer;
-            vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainKnotEntity.getChainType().getKnotTexture()));
+            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainKnotEntity.getChainType().getKnotTexture()));
             this.model.renderToBuffer(matrices, vertexConsumer, light, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
             matrices.popPose();
         }
 
         // Render the links
-        List<ChainLink> links = chainKnotEntity.getLinks();
-        for (ChainLink link : links) {
+        for (ChainLink link : chainKnotEntity.getLinks()) { //Is always 0
             if (link.primary != chainKnotEntity || link.isDead()) continue;
             this.renderChainLink(link, partialTicks, matrices, vertexConsumers);
             if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
