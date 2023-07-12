@@ -3,20 +3,23 @@ package com.lilypuree.connectiblechains.chain;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.util.Helper;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.*;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
-
-import static com.lilypuree.connectiblechains.compat.BuiltinCompat.BUILTIN_TYPES;
-import static com.lilypuree.connectiblechains.compat.BuiltinCompat.registerTypeForBuiltin;
 
 @Mod.EventBusSubscriber(modid = ConnectibleChains.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ChainTypesRegistry {
@@ -30,7 +33,7 @@ public class ChainTypesRegistry {
     }
 
     public static ChainType getValue(String id) {
-        return REGISTRY.get().getValue(ResourceLocation.tryParse(id));
+        return getValue(ResourceLocation.tryParse(id));
     }
 
     public static Collection<ResourceLocation> getKeys() {
@@ -38,36 +41,27 @@ public class ChainTypesRegistry {
     }
 
     public static final ResourceLocation DEFAULT_CHAIN_TYPE_ID = Helper.identifier("iron_chain");
-    public static ChainType DEFAULT_CHAIN_TYPE;
+    public static Supplier<ChainType> DEFAULT_CHAIN_TYPE;
+    public static final ResourceKey<Registry<ChainType>> CHAIN_TYPES =  ResourceKey.createRegistryKey(new ResourceLocation(ConnectibleChains.MODID, DEFAULT_CHAIN_TYPE_ID.getPath()));
+    public static final DeferredRegister CHAINS = DeferredRegister.create(CHAIN_TYPES, ConnectibleChains.MODID);
+    private static Supplier<IForgeRegistry<ChainType>> REGISTRY =
+            CHAINS.makeRegistry(() -> new RegistryBuilder<>()
+                    .setName(new ResourceLocation(ConnectibleChains.MODID, "chain_types"))
+                    .setDefaultKey(DEFAULT_CHAIN_TYPE_ID));
     @SuppressWarnings("unused")
-    public static ChainType IRON_CHAIN;
+    public static Supplier<ChainType> IRON_CHAIN;
 
-    public static final Map<Item, ChainType> ITEM_CHAIN_TYPES = new Object2ObjectOpenHashMap<>(64);
+    public static final Map<Item, Supplier<ChainType>> ITEM_CHAIN_TYPES = new HashMap<>();
 
     //---------------------------------------------------------------------------------
 
-    private static Supplier<IForgeRegistry<ChainType>> REGISTRY;
-
     @SubscribeEvent
     public static void onNewRegistry(NewRegistryEvent event) {
-        RegistryBuilder<ChainType> registryBuilder = new RegistryBuilder<>();
-        registryBuilder.setName(new ResourceLocation(ConnectibleChains.MODID, "chain_types"))
-                .setType(ChainType.class)
-                .setDefaultKey(DEFAULT_CHAIN_TYPE_ID);
-        REGISTRY = event.create(registryBuilder);
-    }
-
-    @SubscribeEvent
-    public static void onRegistry(RegistryEvent.Register<ChainType> event) {
         IRON_CHAIN = DEFAULT_CHAIN_TYPE = register(DEFAULT_CHAIN_TYPE_ID.getPath(), Items.CHAIN);
-        event.getRegistry().register(IRON_CHAIN);
-//        for (ResourceLocation itemId : BUILTIN_TYPES) {
-//            registerTypeForBuiltin(itemId);
-//        }
     }
 
-    private static ChainType register(String id, Item item) {
-        ChainType chainType = new ChainType(item).setRegistryName(Helper.identifier(id));
+    public static Supplier<ChainType> register(String id, Item item) {
+        Supplier<ChainType> chainType = CHAINS.register("iron_chain", () -> new ChainType(Items.CHAIN));
         ITEM_CHAIN_TYPES.put(item, chainType);
         return chainType;
     }
@@ -79,23 +73,21 @@ public class ChainTypesRegistry {
      * @return the new {@link ChainType}
      */
     @SuppressWarnings("UnusedReturnValue")
-    public static ChainType register(Item item) {
+    public static Supplier<ChainType> register(Item item) {
         ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
         if (id == ForgeRegistries.ITEMS.getDefaultKey()) {
             ConnectibleChains.LOGGER.error("Cannot create chain type with unregistered item: {}", item.getDescription());
             return DEFAULT_CHAIN_TYPE;
         }
         if (REGISTRY.get().containsKey(id)) {
-            return REGISTRY.get().getValue(id);
+            return ()->REGISTRY.get().getValue(id);
         }
-        ChainType chainType = new ChainType(item).setRegistryName(id);
+        Supplier<ChainType> chainType = ()->new ChainType(item);
         ITEM_CHAIN_TYPES.put(item, chainType);
         return chainType;
     }
 
-
-    @SuppressWarnings("EmptyMethod")
-    public static void init() {
-        // Static fields are now initialized
+    public static void init(IEventBus bus) {
+        CHAINS.register(bus);
     }
 }

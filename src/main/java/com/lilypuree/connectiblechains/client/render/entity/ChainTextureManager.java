@@ -15,12 +15,13 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * The manager loads the chain models that contain the texture information for all chain types.
@@ -72,22 +73,22 @@ public class ChainTextureManager extends SimplePreparableReloadListener<Map<Reso
         Map<ResourceLocation, JsonModel> map = new HashMap<>();
 
         for (ResourceLocation chainType : ChainTypesRegistry.getKeys()) {
-            try (Resource resource = manager.getResource(getResourceId(getModelId(chainType)))) {
-                Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8);
-                JsonModel jsonModel = GSON.fromJson(reader, JsonModel.class);
-                map.put(chainType, jsonModel);
-            } catch (FileNotFoundException e) {
-                JsonModel builtinModel = loadBuiltinModel(manager, chainType);
-                if (builtinModel != null) {
-                    map.put(chainType, builtinModel);
-                } else {
-                    ConnectibleChains.LOGGER.error("Missing model for {}.", chainType, e);
+            manager.getResource(getResourceId(getModelId(chainType))).ifPresentOrElse(resource -> {
+                Reader reader;
+                try {
+                    reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8);
+                    JsonModel jsonModel = GSON.fromJson(reader, JsonModel.class);
+                    map.put(chainType, jsonModel);
+                } catch (IOException e) {
+                    JsonModel builtinModel = loadBuiltinModel(manager, chainType);
+                    if (builtinModel != null) {
+                        map.put(chainType, builtinModel);
+                    } else {
+                        ConnectibleChains.LOGGER.error("Missing model for {}.", chainType, e);
+                    }
                 }
-            } catch (Exception e) {
-                ConnectibleChains.LOGGER.error("Failed to load model for {}.", chainType, e);
-            }
+            }, () -> ConnectibleChains.LOGGER.error("Failed to load model for {}.", chainType));
         }
-
         return map;
     }
 
@@ -112,11 +113,14 @@ public class ChainTextureManager extends SimplePreparableReloadListener<Map<Reso
     @Nullable
     private JsonModel loadBuiltinModel(ResourceManager manager, ResourceLocation chainType) {
         if (BuiltinCompat.BUILTIN_TYPES.contains(chainType)) {
-            try (Resource resource = manager.getResource(getBuiltinResourceId(getModelId(chainType)))) {
-                Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8);
-                return GSON.fromJson(reader, JsonModel.class);
-            } catch (Exception e) {
-                ConnectibleChains.LOGGER.error("Error for builtin type {}.", chainType, e);
+            Optional<Resource> resource = manager.getResource(getBuiltinResourceId(getModelId(chainType)));
+            if(resource.isPresent()) {
+                try {
+                    Reader reader = new InputStreamReader(resource.get().open(), StandardCharsets.UTF_8);
+                    return GSON.fromJson(reader, JsonModel.class);
+                } catch (Exception e) {
+                    ConnectibleChains.LOGGER.error("Error for builtin type {}.", chainType, e);
+                }
             }
         }
         return null;

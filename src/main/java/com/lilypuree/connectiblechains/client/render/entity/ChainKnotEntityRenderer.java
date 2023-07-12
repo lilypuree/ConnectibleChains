@@ -20,6 +20,7 @@ package com.lilypuree.connectiblechains.client.render.entity;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.chain.ChainLink;
 import com.lilypuree.connectiblechains.chain.ChainType;
+import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import com.lilypuree.connectiblechains.client.ClientInitializer;
 import com.lilypuree.connectiblechains.client.render.entity.model.ChainKnotEntityModel;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
@@ -29,6 +30,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Matrix4f;
 import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -37,7 +39,6 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.HangingEntity;
@@ -89,6 +90,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
     }
 
 
+
     @Override
     public void render(ChainKnotEntity chainKnotEntity, float yaw, float partialTicks, PoseStack matrices, MultiBufferSource vertexConsumers, int light) {
         // Render the knot
@@ -104,8 +106,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         }
 
         // Render the links
-        List<ChainLink> links = chainKnotEntity.getLinks();
-        for (ChainLink link : links) {
+        for (ChainLink link : chainKnotEntity.getLinks()) { //Is always 0
             if (link.primary != chainKnotEntity || link.isDead()) continue;
             this.renderChainLink(link, partialTicks, matrices, vertexConsumers);
             if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
@@ -116,9 +117,9 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
             matrices.pushPose();
             // F stands for "from", T for "to"
-            Component holdingCount = new TextComponent("F: " + chainKnotEntity.getLinks().stream()
+            Component holdingCount = Component.literal("F: " + chainKnotEntity.getLinks().stream()
                     .filter(l -> l.primary == chainKnotEntity).count());
-            Component heldCount = new TextComponent("T: " + chainKnotEntity.getLinks().stream()
+            Component heldCount = Component.literal("T: " + chainKnotEntity.getLinks().stream()
                     .filter(l -> l.secondary == chainKnotEntity).count());
             matrices.translate(0, 0.25, 0);
             this.renderNameTag(chainKnotEntity, holdingCount, matrices, vertexConsumers, light);

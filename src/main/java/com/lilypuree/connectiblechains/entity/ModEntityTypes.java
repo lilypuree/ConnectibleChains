@@ -13,7 +13,7 @@ import net.minecraftforge.registries.RegistryObject;
 @Mod.EventBusSubscriber(modid = ConnectibleChains.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ModEntityTypes {
 
-    public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITIES, ConnectibleChains.MODID);
+    public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, ConnectibleChains.MODID);
 
     //    public static EntityType<ChainKnotEntity> CHAIN_KNOT;
     public static RegistryObject<EntityType<ChainKnotEntity>> CHAIN_KNOT = ENTITIES.register("chain_knot", () -> EntityType.Builder.<ChainKnotEntity>of(ChainKnotEntity::new, MobCategory.MISC)

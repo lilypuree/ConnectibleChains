@@ -3,12 +3,11 @@ package com.lilypuree.connectiblechains.chain;
 import com.lilypuree.connectiblechains.client.ClientInitializer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.registries.ForgeRegistryEntry;
 
 /**
  * The 'material' of a chain
  */
-public class ChainType extends ForgeRegistryEntry<ChainType> {
+public class ChainType {
 
     private Item item;
 

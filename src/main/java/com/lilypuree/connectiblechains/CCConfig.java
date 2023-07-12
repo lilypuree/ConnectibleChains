@@ -9,7 +9,7 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 
 @Mod.EventBusSubscriber(modid = ConnectibleChains.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class CCConfig {
-    private static final transient boolean IS_DEBUG_ENV = FMLEnvironment.production;
+    private static final boolean IS_DEBUG_ENV = FMLEnvironment.production;
 
     public ForgeConfigSpec.DoubleValue chainHangAmount;
     public ForgeConfigSpec.IntValue maxChainRange;

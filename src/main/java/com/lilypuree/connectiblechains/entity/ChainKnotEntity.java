@@ -23,6 +23,7 @@ import com.lilypuree.connectiblechains.chain.ChainType;
 import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import com.lilypuree.connectiblechains.datafixer.ChainKnotFixer;
 import com.lilypuree.connectiblechains.network.ModPacketHandler;
+import com.lilypuree.connectiblechains.network.S2CChainAttachPacket;
 import com.lilypuree.connectiblechains.network.S2CKnotChangeTypePacket;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
@@ -87,7 +88,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * All links that involve this knot (secondary and primary)
      */
-    private final ObjectList<ChainLink> links = new ObjectArrayList<>();
+    public final ObjectList<ChainLink> links = new ObjectArrayList<>();
 
     /**
      * Links where the 'secondary' might not exist yet. Will be cleared after the grace period.
@@ -102,7 +103,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * The chain type, used for rendering
      */
-    private ChainType chainType = ChainTypesRegistry.DEFAULT_CHAIN_TYPE;
+    private ChainType chainType = ChainTypesRegistry.DEFAULT_CHAIN_TYPE.get();
 
     /**
      * Remaining grace ticks, will be set to 0 when the last incomplete link is removed.
@@ -585,7 +586,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         if (ChainTypesRegistry.ITEM_CHAIN_TYPES.containsKey(handStack.getItem())) {
             // Interacted with a valid chain item, create a new link
             playPlacementSound();
-            ChainType chainType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(handStack.getItem());
+            ChainType chainType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(handStack.getItem()).get();
             ChainLink.create(this, player, chainType);
             if (!player.isCreative()) {
                 player.getItemInHand(hand).shrink(1);

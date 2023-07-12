@@ -36,7 +36,11 @@ public class S2CChainAttachPacket {
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ClientInitializer.chainPacketHandler.createLinks(fromId, new int[]{toId}, Collections.singletonList(chainType));
+            try {
+                ClientInitializer.chainPacketHandler.createLinks(fromId, new int[]{toId}, Collections.singletonList(chainType));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
         return true;
     }

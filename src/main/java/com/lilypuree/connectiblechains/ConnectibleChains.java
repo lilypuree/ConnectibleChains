@@ -16,14 +16,14 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.event.world.BlockEvent;
-import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -42,8 +42,10 @@ public class ConnectibleChains {
     public static CCConfig runtimeConfig;
 
     public ConnectibleChains() {
+        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+
         ModEntityTypes.register();
-        ChainTypesRegistry.init();
+        ChainTypesRegistry.init(bus);
         BuiltinCompat.init();
 
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
@@ -67,10 +69,10 @@ public class ConnectibleChains {
      * If it does involve us, then we have work to do, we create connections remove items from inventory and such.
      */
     private void chainUseEvent(PlayerInteractEvent.RightClickBlock event) {
-        Player player = event.getPlayer();
+        Player player = event.getEntity();
         InteractionHand hand = event.getHand();
         BlockHitResult hitResult = event.getHitVec();
-        Level world = event.getWorld();
+        Level world = event.getLevel();
 
         if (player == null || player.isCrouching()) return;
         ItemStack stack = player.getItemInHand(hand);
@@ -108,7 +110,7 @@ public class ConnectibleChains {
             List<ChainLink> attachableChains = ChainKnotEntity.getHeldChainsInRange(player, blockPos);
 
             // Use the held item as the new knot type
-            ChainType knotType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(stack.getItem());
+            ChainType knotType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(stack.getItem()).get();
 
             // Allow default interaction behaviour.
             if (attachableChains.size() == 0 && knotType == null) {
