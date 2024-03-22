@@ -32,7 +32,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -420,7 +419,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     @Override
     public boolean skipAttackInteraction(Entity attacker) {
         if (attacker instanceof Player playerEntity) {
-            this.hurt(this.damageSources().playerAttack(playerEntity), 0.0F);
+            this.hurt(DamageSource.playerAttack(playerEntity), 0.0F);
         } else {
             playSound(SoundEvents.CHAIN_HIT, 0.5F, 1.0F);
         }
@@ -696,7 +695,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
 
 
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
+    public Packet<?> getAddEntityPacket() {
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 

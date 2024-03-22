@@ -1,6 +1,6 @@
 modLoader="javafml" #mandatory
 # A version range to match for said mod loader - for regular FML @Mod it will be the forge version
-loaderVersion="[45,)" #mandatory (28 is current forge version)
+loaderVersion="[43,)" #mandatory (28 is current forge version)
 
 license="GNU Lesser General Public License v3.0"
 
@@ -18,12 +18,12 @@ Connect chains between fences
 [[dependencies.connectiblechains]]
     modId="forge" #mandatory
     mandatory=true #mandatory
-    versionRange="[45.1,)" #mandatory
+    versionRange="[43,)" #mandatory
     ordering="NONE"
     side="BOTH"
 [[dependencies.connectiblechains]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.19.4,1.20)"
+    versionRange="[1.19.2,1.19.3)"
     ordering="NONE"
     side="BOTH"

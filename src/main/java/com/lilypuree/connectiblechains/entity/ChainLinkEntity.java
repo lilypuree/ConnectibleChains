@@ -1,10 +1,8 @@
 package com.lilypuree.connectiblechains.entity;
 
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -38,7 +36,7 @@ public interface ChainLinkEntity {
             return InteractionResult.PASS;
         }
 
-        if (source.is(DamageTypeTags.IS_EXPLOSION)) {
+        if (source.isExplosion()) {
             return InteractionResult.SUCCESS;
         }
 
@@ -49,7 +47,7 @@ public interface ChainLinkEntity {
             }
         }
 
-        if (!source.is(DamageTypeTags.IS_PROJECTILE)) {
+        if (!source.isProjectile()) {
             // Projectiles such as arrows (actually probably just arrows) can get "stuck"
             // on entities they cannot damage, such as players while blocking with shields or these chains.
             // That would cause some serious sound spam, and we want to avoid that.
