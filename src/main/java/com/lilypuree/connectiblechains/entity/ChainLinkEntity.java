@@ -39,8 +39,6 @@ public interface ChainLinkEntity {
         if (source.isExplosion()) {
             return InteractionResult.SUCCESS;
         }
-
-
         if (source.getDirectEntity() instanceof Player player) {
             if (canDestroyWith(player.getMainHandItem())) {
                 return InteractionResult.sidedSuccess(!player.isCreative());

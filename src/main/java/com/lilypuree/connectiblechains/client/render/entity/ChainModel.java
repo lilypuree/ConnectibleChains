@@ -55,14 +55,14 @@ public record ChainModel(float[] vertices, float[] uvs) {
         for (int i = 0; i < count; i++) {
             // divide by 2 because chain has 2 face sets
             @SuppressWarnings({"IntegerDivisionInFloatingPointContext"})
-            float f = (i % (count / 2)) / (float) (count / 2);
+            float f = (i % (count/2)) / (float) (count/2);
             int blockLight = (int) Mth.lerp(f, (float) bLight0, (float) bLight1);
             int skyLight = (int) Mth.lerp(f, (float) sLight0, (float) sLight1);
             int light = LightTexture.pack(blockLight, skyLight);
             buffer
-                    .vertex(modelMatrix, vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2])
+                    .vertex(modelMatrix, vertices[i*3], vertices[i*3+1] , vertices[i*3+2])
                     .color(255, 255, 255, 255)
-                    .uv(uvs[i * 2], uvs[i * 2 + 1])
+                    .uv(uvs[i*2], uvs[i*2+1])
                     .overlayCoords(OverlayTexture.NO_OVERLAY)
                     .uv2(light)
                     // trial and error magic values that change the overall brightness of the chain
@@ -78,8 +78,8 @@ public record ChainModel(float[] vertices, float[] uvs) {
         private int size;
 
         public Builder(int initialCapacity) {
-            vertices = new ArrayList<>(initialCapacity * 3);
-            uvs = new ArrayList<>(initialCapacity * 2);
+            vertices = new ArrayList<>(initialCapacity*3);
+            uvs = new ArrayList<>(initialCapacity*2);
         }
 
         public Builder vertex(Vector3f v) {
@@ -100,8 +100,8 @@ public record ChainModel(float[] vertices, float[] uvs) {
         }
 
         public ChainModel build() {
-            if (vertices.size() != size * 3) throw new AssertionError("Wrong count of vertices");
-            if (uvs.size() != size * 2) throw new AssertionError("Wrong count of uvs");
+            if(vertices.size() != size*3) throw new AssertionError("Wrong count of vertices");
+            if(uvs.size() != size*2) throw new AssertionError("Wrong count of uvs");
 
             return new ChainModel(toFloatArray(vertices), toFloatArray(uvs));
         }

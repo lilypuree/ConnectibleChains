@@ -19,10 +19,11 @@ package com.lilypuree.connectiblechains.entity;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.chain.ChainLink;
+import com.lilypuree.connectiblechains.chain.ChainType;
+import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import com.lilypuree.connectiblechains.datafixer.ChainKnotFixer;
 import com.lilypuree.connectiblechains.network.ModPacketHandler;
 import com.lilypuree.connectiblechains.network.S2CKnotChangeTypePacket;
-import com.lilypuree.connectiblechains.tag.CommonTags;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import net.minecraft.core.BlockPos;
@@ -46,9 +47,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
@@ -59,7 +58,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.entity.IEntityAdditionalSpawnData;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -95,7 +93,6 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
      * Links where the 'secondary' might not exist yet. Will be cleared after the grace period.
      */
     private final ObjectList<Tag> incompleteLinks = new ObjectArrayList<>();
-    public final static String SOURCE_ITEM_KEY = "SourceItem";
 
     /**
      * Increments each tick, when it reached 100 it resets and checks {@link #canStayAttached()}.
@@ -105,7 +102,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * The chain type, used for rendering
      */
-    private Item chainItemSource = Items.CHAIN;
+    private ChainType chainType = ChainTypesRegistry.DEFAULT_CHAIN_TYPE;
 
     /**
      * Remaining grace ticks, will be set to 0 when the last incomplete link is removed.
@@ -121,10 +118,10 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         super(entityType, level);
     }
 
-    public ChainKnotEntity(Level world, BlockPos pos, Item source) {
+    public ChainKnotEntity(Level world, BlockPos pos, ChainType chainType) {
         super(ModEntityTypes.CHAIN_KNOT.get(), world, pos);
         this.setPos((double) pos.getX() + 0.5D, (double) pos.getY() + 0.5D, (double) pos.getZ() + 0.5D);
-        this.chainItemSource = source;
+        this.chainType = chainType;
     }
 
     /**
@@ -137,12 +134,12 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         super.setPos((double) Mth.floor(x) + 0.5D, (double) Mth.floor(y) + 0.5D, (double) Mth.floor(z) + 0.5D);
     }
 
-    public Item getChainItemSource() {
-        return chainItemSource;
+    public ChainType getChainType() {
+        return chainType;
     }
 
-    public void setChainItemSource(Item chainItemSource) {
-        this.chainItemSource = chainItemSource;
+    public void setChainType(ChainType chainType) {
+        this.chainType = chainType;
     }
 
     public void setGraceTicks(byte graceTicks) {
@@ -270,13 +267,13 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         assert element instanceof CompoundTag;
         CompoundTag tag = (CompoundTag) element;
 
-        Item source = ForgeRegistries.ITEMS.getValue(ResourceLocation.tryParse(tag.getString(SOURCE_ITEM_KEY)));
+        ChainType chainType = ChainTypesRegistry.getValue(tag.getString("ChainType"));
 
         if (tag.contains("UUID")) {
             UUID uuid = tag.getUUID("UUID");
             Entity entity = ((ServerLevel) level).getEntity(uuid);
             if (entity != null) {
-                ChainLink.create(this, entity, source);
+                ChainLink.create(this, entity, chainType);
                 return true;
             }
         } else if (tag.contains("RelX") || tag.contains("RelY") || tag.contains("RelZ")) {
@@ -285,7 +282,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
             blockPos = getBlockPosAsFacingRelative(blockPos, Direction.fromYRot(this.getYRot()));
             ChainKnotEntity entity = ChainKnotEntity.getKnotAt(level, blockPos.offset(pos));
             if (entity != null) {
-                ChainLink.create(this, entity, source);
+                ChainLink.create(this, entity, chainType);
                 return true;
             }
         } else {
@@ -295,7 +292,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         // At the start the server and client need to tell each other the info.
         // So we need to check if the object is old enough for these things to exist before we delete them.
         if (graceTicks <= 0) {
-            spawnAtLocation(source);
+            spawnAtLocation(chainType.item());
             dropItem(null);
             return true;
         }
@@ -442,7 +439,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     }
 
     /**
-     * Stores the {@link #chainItemSource chain type} and all primary links
+     * Stores the {@link #chainType chain type} and all primary links
      * and old, incomplete links inside {@code root}
      *
      * @param root the tag to write info in.
@@ -450,7 +447,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     @Override
     public void addAdditionalSaveData(CompoundTag root) {
         ChainKnotFixer.INSTANCE.addVersionTag(root);
-        root.putString(SOURCE_ITEM_KEY, ForgeRegistries.ITEMS.getKey(chainItemSource).toString());
+        root.putString("ChainType", ChainTypesRegistry.getKey(chainType).toString());
         ListTag linksTag = new ListTag();
 
         // Write complete links
@@ -459,7 +456,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
             if (link.primary != this) continue;
             Entity secondary = link.secondary;
             CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString(SOURCE_ITEM_KEY, ForgeRegistries.ITEMS.getKey(link.sourceItem).toString());
+            compoundTag.putString("ChainType", ChainTypesRegistry.getKey(link.chainType).toString());
             if (secondary instanceof Player) {
                 UUID uuid = secondary.getUUID();
                 compoundTag.putUUID("UUID", uuid);
@@ -496,7 +493,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         if (root.contains("Chains")) {
             incompleteLinks.addAll(root.getList("Chains", Tag.TAG_COMPOUND));
         }
-        chainItemSource = ForgeRegistries.ITEMS.getValue(ResourceLocation.tryParse(root.getString(SOURCE_ITEM_KEY)));
+        chainType = ChainTypesRegistry.getValue(root.getString("ChainType"));
     }
 
     @Override
@@ -554,7 +551,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     public InteractionResult interact(Player player, InteractionHand hand) {
         ItemStack handStack = player.getItemInHand(hand);
         if (level.isClientSide) {
-            if (CommonTags.isChain(handStack)) {
+            if (ChainTypesRegistry.ITEM_CHAIN_TYPES.containsKey(handStack.getItem())) {
                 return InteractionResult.SUCCESS;
             }
 
@@ -585,15 +582,16 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         }
 
         // 3. Try to create a new connection
-        if (CommonTags.isChain(handStack)) {
+        if (ChainTypesRegistry.ITEM_CHAIN_TYPES.containsKey(handStack.getItem())) {
             // Interacted with a valid chain item, create a new link
             playPlacementSound();
-            ChainLink.create(this, player, handStack.getItem());
+            ChainType chainType = ChainTypesRegistry.ITEM_CHAIN_TYPES.get(handStack.getItem());
+            ChainLink.create(this, player, chainType);
             if (!player.isCreative()) {
                 player.getItemInHand(hand).shrink(1);
             }
             // Allow changing the chainType of the knot
-            updateChainType(handStack.getItem());
+            updateChainType(chainType);
 
             return InteractionResult.CONSUME;
         }
@@ -622,7 +620,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
             if (link.primary == this) continue;
 
             // Move that link to this knot
-            ChainLink newLink = ChainLink.create(link.primary, this, link.sourceItem);
+            ChainLink newLink = ChainLink.create(link.primary, this, link.chainType);
 
             // Check if the link does not already exist
             if (newLink != null) {
@@ -642,13 +640,13 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * Sets the chain type and sends a packet to the client.
      *
-     * @param sourceItem The new chain type.
+     * @param chainType The new chain type.
      */
-    public void updateChainType(Item sourceItem) {
-        this.chainItemSource = sourceItem;
+    public void updateChainType(ChainType chainType) {
+        this.chainType = chainType;
 
         if (!level.isClientSide) {
-            S2CKnotChangeTypePacket packet = new S2CKnotChangeTypePacket(getId(), ForgeRegistries.ITEMS.getKey(sourceItem));
+            S2CKnotChangeTypePacket packet = new S2CKnotChangeTypePacket(getId(), ChainTypesRegistry.getKey(chainType));
             BlockPos pos = blockPosition();
             ModPacketHandler.INSTANCE.send(PacketDistributor.NEAR
                             .with(PacketDistributor.TargetPoint.p(pos.getX(), pos.getY(), pos.getZ(), ChainKnotEntity.VISIBLE_RANGE, level.dimension())),
@@ -683,7 +681,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * @return all complete links that are associated with this knot.
      * @apiNote Operating on the list has potential for bugs as it does not include incomplete links.
-     * For example {@link ChainLink#create(ChainKnotEntity, Entity, Item)} checks if the link already exists
+     * For example {@link ChainLink#create(ChainKnotEntity, Entity, ChainType)} checks if the link already exists
      * using this list. Same goes for {@link #tryAttachHeldChains(Player)}
      * but at the end of the day it doesn't really matter.
      * When an incomplete link is not resolved within the first two ticks it is unlikely to ever complete.
@@ -701,13 +699,13 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
 
     @Override
     public void writeSpawnData(FriendlyByteBuf buffer) {
-        buffer.writeResourceLocation(ForgeRegistries.ITEMS.getKey(chainItemSource));
+        buffer.writeResourceLocation(ChainTypesRegistry.getKey(chainType));
     }
 
     @Override
     public void readSpawnData(FriendlyByteBuf additionalData) {
         ResourceLocation chainTypeID = additionalData.readResourceLocation();
-        this.setChainItemSource(ForgeRegistries.ITEMS.getValue(chainTypeID));
+        this.setChainType(ChainTypesRegistry.getValue(chainTypeID));
         this.setGraceTicks((byte) 0);
     }
 
@@ -727,7 +725,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
 
     @Override
     public ItemStack getPickedResult(HitResult target) {
-        return new ItemStack(chainItemSource);
+        return new ItemStack(chainType.item());
     }
 
 }

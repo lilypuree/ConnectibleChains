@@ -1,8 +1,10 @@
 package com.lilypuree.connectiblechains.datafixer;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
+import com.mojang.math.Constants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 
 import java.util.*;
@@ -68,7 +70,7 @@ public abstract class NbtFixer {
      * Returns the current data format version.
      * The lowest two digits are for the patch level.
      * The next two are for minor versions.
-     * The rest are for major versions.
+     * The rest are fore major versions.
      */
     protected abstract int getVersion();
 

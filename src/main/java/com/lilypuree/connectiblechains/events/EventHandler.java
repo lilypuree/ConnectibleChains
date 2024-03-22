@@ -9,7 +9,7 @@ import com.lilypuree.connectiblechains.util.PacketCreator;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -19,7 +19,7 @@ import net.minecraftforge.network.PacketDistributor;
 public class EventHandler {
 
     @SubscribeEvent
-    public static void onEntitySpawn(EntityJoinLevelEvent event) {
+    public static void onEntitySpawn(EntityJoinWorldEvent event) {
         Entity entity = event.getEntity();
         if (entity.getType() == ModEntityTypes.CHAIN_KNOT.get() || entity.getType() == ModEntityTypes.CHAIN_COLLISION.get()) {
             entity.setDeltaMovement(Vec3.ZERO);
@@ -31,7 +31,7 @@ public class EventHandler {
         if (event.getTarget() instanceof ChainKnotEntity knot) {
             S2CMultiChainAttachPacket packet = PacketCreator.createMultiAttach(knot);
             if (packet == null) return;
-            ModPacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) event.getEntity()), packet);
+            ModPacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) event.getPlayer()), packet);
         }
     }
 }

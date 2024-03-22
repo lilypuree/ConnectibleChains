@@ -1,6 +1,6 @@
 package com.lilypuree.connectiblechains.datafixer;
 
-import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
+import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -10,7 +10,7 @@ import net.minecraft.util.Mth;
  * Upgrades the NBT data of {@link com.lilypuree.connectiblechains.entity.ChainKnotEntity Chain Knots}
  * to newer versions.
  */
-public class ChainKnotFixer extends NbtFixer {
+public class ChainKnotFixer extends NbtFixer{
     public static final ChainKnotFixer INSTANCE = new ChainKnotFixer();
 
     /**
@@ -18,7 +18,7 @@ public class ChainKnotFixer extends NbtFixer {
      */
     @Override
     protected int getVersion() {
-        return 3_01_00;
+        return 2_01_00;
     }
 
     /**
@@ -26,35 +26,23 @@ public class ChainKnotFixer extends NbtFixer {
      */
     @Override
     public void registerFixers() {
+        addFix(2_01_00, "Add ChainType", this::fixChainType201);
         addFix(2_01_00, "Make Chains position relative", this::fixChainPos201);
-        addFix(3_01_00, "Use new SourceItem instead of ChainType", this::fixSourceItemInsteadOfChainType);
     }
 
-
     /**
-     * Since the 1.19 version a chain knot entity doesn't use the custom ChainType to store its type.
-     * It instead uses a tag named 'SourceItem' to store the item from which the chain is made.
-     * This fix adds that tag to Chain Knots that were created with the old format (prior to 1.19).
-     * Important: The fix doesn't check what type the old chain knot had and just uses minecraft:chain as
-     * the new SourceItem. But as far as I can tell, compatibility with other mods was not really active in this
-     * port anyway, so it shouldn't really be a problem. Further I think it's much better to replace all existing
-     * connected chains with the default minecraft variant, than having them break and just display missing textures.
+     * Add the chain types
      */
-    private CompoundTag fixSourceItemInsteadOfChainType(CompoundTag nbt) {
+    private CompoundTag fixChainType201(CompoundTag nbt) {
         if (isNotChainKnot201(nbt)) return nbt;
-
-        // if there's the old tag present, delete it
-        if (nbt.contains("ChainType")) {
-            nbt.remove("ChainType");
+        if (!nbt.contains("ChainType")) {
+            nbt.putString("ChainType", ChainTypesRegistry.DEFAULT_CHAIN_TYPE_ID.toString());
         }
-        nbt.putString(ChainKnotEntity.SOURCE_ITEM_KEY, "minecraft:chain");
-
         for (Tag linkElem : nbt.getList("Chains", Tag.TAG_COMPOUND)) {
             if (linkElem instanceof CompoundTag link) {
-                if (link.contains("ChainType")) {
-                    link.remove("ChainType");
+                if (!link.contains("ChainType")) {
+                    link.putString("ChainType", ChainTypesRegistry.DEFAULT_CHAIN_TYPE_ID.toString());
                 }
-                link.putString(ChainKnotEntity.SOURCE_ITEM_KEY, "minecraft:chain");
             }
         }
         return nbt;

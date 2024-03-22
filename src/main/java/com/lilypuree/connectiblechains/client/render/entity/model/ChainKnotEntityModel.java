@@ -16,11 +16,25 @@
  */
 package com.lilypuree.connectiblechains.client.render.entity.model;
 
+import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Matrix4f;
 import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.ListModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.*;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+
+import java.util.function.Function;
 
 /**
  * Model for the {@link com.lilypuree.connectiblechains.entity.ChainKnotEntity}.
@@ -28,8 +42,8 @@ import net.minecraft.world.entity.Entity;
  * <p>
  * The model is 6x3x6 pixels big.
  *
- * @author legoatoom
  * @see net.minecraft.client.renderer.entity.LeashKnotRenderer
+ * @author legoatoom
  */
 public class ChainKnotEntityModel<T extends Entity> extends HierarchicalModel<T> {
     private final ModelPart chainKnot;
@@ -43,14 +57,8 @@ public class ChainKnotEntityModel<T extends Entity> extends HierarchicalModel<T>
     public static LayerDefinition getTexturedModelData() {
         MeshDefinition modelData = new MeshDefinition();
         PartDefinition modelPartData = modelData.getRoot();
-        PartDefinition bb_main = modelPartData.addOrReplaceChild("knot", CubeListBuilder.create(), PartPose.offset(0.0F, -12.5F, 0.0F));
-
-        bb_main.addOrReplaceChild("knot_child", CubeListBuilder.create().texOffs(3, 1).addBox(-1.0F, -1.5F, 3.0F, 3.0F, 6.0F, 0.0F, new CubeDeformation(0.0F))
-                .texOffs(0, 1).addBox(-1.0F, -1.5F, -3.0F, 3.0F, 0.0F, 6.0F, new CubeDeformation(0.0F))
-                .texOffs(0, 9).mirror().addBox(-1.0F, 4.5F, -3.0F, 3.0F, 0.0F, 6.0F, new CubeDeformation(0.0F)).mirror(false)
-                .texOffs(3, 6).addBox(-1.0F, -1.5F, -3.0F, 3.0F, 6.0F, 0.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.5F, 7.0F, 0.0F, 0.0F, 0.0F, -1.5708F));
-
-        return LayerDefinition.create(modelData, 16, 16);
+        modelPartData.addOrReplaceChild("knot", CubeListBuilder.create().texOffs(0, 0).addBox(-3.0F, -8.0F, -3.0F, 6.0F, 8.0F, 6.0F), PartPose.ZERO);
+        return LayerDefinition.create(modelData, 32, 32);
     }
 
 

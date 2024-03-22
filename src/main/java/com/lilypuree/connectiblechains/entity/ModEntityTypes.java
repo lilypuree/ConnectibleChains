@@ -13,12 +13,12 @@ import net.minecraftforge.registries.RegistryObject;
 @Mod.EventBusSubscriber(modid = ConnectibleChains.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ModEntityTypes {
 
-    public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, ConnectibleChains.MODID);
+    public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITIES, ConnectibleChains.MODID);
 
     //    public static EntityType<ChainKnotEntity> CHAIN_KNOT;
     public static RegistryObject<EntityType<ChainKnotEntity>> CHAIN_KNOT = ENTITIES.register("chain_knot", () -> EntityType.Builder.<ChainKnotEntity>of(ChainKnotEntity::new, MobCategory.MISC)
             .clientTrackingRange(10).updateInterval(Integer.MAX_VALUE).setShouldReceiveVelocityUpdates(false)
-            .sized(6 / 16f, 0.5f).canSpawnFarFromPlayer().fireImmune().build("chain_knot"));
+            .sized(6/16f, 0.5f).canSpawnFarFromPlayer().fireImmune().build("chain_knot"));
 
     public static RegistryObject<EntityType<ChainCollisionEntity>> CHAIN_COLLISION = ENTITIES.register("chain_collision", () -> EntityType.Builder.<ChainCollisionEntity>of(ChainCollisionEntity::new, MobCategory.MISC)
             .clientTrackingRange(10).updateInterval(Integer.MAX_VALUE).setShouldReceiveVelocityUpdates(false)
