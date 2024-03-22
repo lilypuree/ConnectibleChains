@@ -10,7 +10,7 @@ version="${file.jarVersion}" #mandatory
 displayName="Connectible Chains" #mandatory
 logoFile="icon.png" #optional
 credits="Legoatoom for creating the original fabric mod" #optional
-authors="legoatoom, quendolin, lilypuree" #optional
+authors="legoatoom, qendolin, lilypuree" #optional
 description='''
 Connect chains between fences
 '''
