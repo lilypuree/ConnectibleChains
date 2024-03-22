@@ -3,6 +3,7 @@ package com.lilypuree.connectiblechains.client;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.client.render.entity.ChainCollisionEntityRenderer;
 import com.lilypuree.connectiblechains.client.render.entity.ChainKnotEntityRenderer;
+import com.lilypuree.connectiblechains.client.render.entity.ChainTextureManager;
 import com.lilypuree.connectiblechains.client.render.entity.model.ChainKnotEntityModel;
 import com.lilypuree.connectiblechains.entity.ChainCollisionEntity;
 import com.lilypuree.connectiblechains.entity.ModEntityTypes;
@@ -21,7 +22,7 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 public class ClientInitializer {
     public static final ModelLayerLocation CHAIN_KNOT = new ModelLayerLocation(Helper.identifier("chain_knot"), "main");
 
-    // public static final ChainTextureManager textureManager = new ChainTextureManager();
+    public static final ChainTextureManager textureManager = new ChainTextureManager();
     protected static ChainKnotEntityRenderer chainKnotEntityRenderer;
     public static ChainPacketHandler chainPacketHandler;
 
