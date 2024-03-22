@@ -50,7 +50,7 @@ public class ChainItemInfo {
 
             // Check if a knot exists and can be destroyed
             // Would work without this check but no swing animation would be played
-            if (ChainKnotEntity.getKnotAt(player.level, blockPos) != null && ChainLinkEntity.canDestroyWith(stack)) {
+            if (ChainKnotEntity.getKnotAt(player.level(), blockPos) != null && ChainLinkEntity.canDestroyWith(stack)) {
                 event.setCanceled(true);
             }
 

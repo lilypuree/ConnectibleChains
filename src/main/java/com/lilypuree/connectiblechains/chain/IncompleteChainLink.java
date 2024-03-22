@@ -40,7 +40,7 @@ public class IncompleteChainLink {
      */
     public boolean tryCompleteOrRemove() {
         if (isDead()) return true;
-        Entity secondary = primary.level.getEntity(secondaryId);
+        Entity secondary = primary.level().getEntity(secondaryId);
         if (secondary == null) return false;
         ChainLink.create(primary, secondary, sourceItem);
         return true;

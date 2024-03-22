@@ -34,7 +34,7 @@ public interface ChainLinkEntity {
         if (self.isInvulnerableTo(source)) {
             return InteractionResult.FAIL;
         }
-        if (self.level.isClientSide) {
+        if (self.level().isClientSide) {
             return InteractionResult.PASS;
         }
 

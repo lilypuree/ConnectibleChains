@@ -177,13 +177,13 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
      */
     @Override
     public void tick() {
-        if (this.level.isClientSide) {
+        if (this.level().isClientSide) {
             // All other logic in handled on the server. The client only knows enough to render the entity.
             links.removeIf(ChainLink::isDead);
-            attachTarget = level.getBlockState(pos);
+            attachTarget = level().getBlockState(pos);
             return;
         }
-        checkOutOfWorld();
+        checkBelowWorld();
 
         boolean anyConverted = convertIncompleteLinks();
         updateLinks();
@@ -264,7 +264,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
      * @see #updateLinks()
      */
     private boolean deserializeChainTag(Tag element) {
-        if (element == null || level.isClientSide) {
+        if (element == null || level().isClientSide) {
             return true;
         }
 
@@ -275,7 +275,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
 
         if (tag.contains("UUID")) {
             UUID uuid = tag.getUUID("UUID");
-            Entity entity = ((ServerLevel) level).getEntity(uuid);
+            Entity entity = ((ServerLevel) level()).getEntity(uuid);
             if (entity != null) {
                 ChainLink.create(this, entity, source);
                 return true;
@@ -284,7 +284,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
             BlockPos blockPos = new BlockPos(tag.getInt("RelX"), tag.getInt("RelY"), tag.getInt("RelZ"));
             // Adjust position to be relative to our facing direction
             blockPos = getBlockPosAsFacingRelative(blockPos, Direction.fromYRot(this.getYRot()));
-            ChainKnotEntity entity = ChainKnotEntity.getKnotAt(level, blockPos.offset(pos));
+            ChainKnotEntity entity = ChainKnotEntity.getKnotAt(level(), blockPos.offset(pos));
             if (entity != null) {
                 ChainLink.create(this, entity, source);
                 return true;
@@ -318,7 +318,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
      * @return boolean - if it can stay attached.
      */
     public boolean canStayAttached() {
-        BlockState block = this.level.getBlockState(this.pos);
+        BlockState block = this.level().getBlockState(this.pos);
         return canAttachTo(block);
     }
 
@@ -554,7 +554,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         ItemStack handStack = player.getItemInHand(hand);
-        if (level.isClientSide) {
+        if (level().isClientSide) {
             if (CommonTags.isChain(handStack)) {
                 return InteractionResult.SUCCESS;
             }
@@ -648,11 +648,11 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     public void updateChainType(Item sourceItem) {
         this.chainItemSource = sourceItem;
 
-        if (!level.isClientSide) {
+        if (!level().isClientSide) {
             S2CKnotChangeTypePacket packet = new S2CKnotChangeTypePacket(getId(), ForgeRegistries.ITEMS.getKey(sourceItem));
             BlockPos pos = blockPosition();
             ModPacketHandler.INSTANCE.send(PacketDistributor.NEAR
-                            .with(PacketDistributor.TargetPoint.p(pos.getX(), pos.getY(), pos.getZ(), ChainKnotEntity.VISIBLE_RANGE, level.dimension())),
+                            .with(PacketDistributor.TargetPoint.p(pos.getX(), pos.getY(), pos.getZ(), ChainKnotEntity.VISIBLE_RANGE, level().dimension())),
                     packet);
         }
     }
@@ -667,7 +667,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
      */
     public static List<ChainLink> getHeldChainsInRange(Player player, BlockPos target) {
         AABB searchBox = AABB.ofSize(Vec3.atLowerCornerOf(target), getMaxRange() * 2, getMaxRange() * 2, getMaxRange() * 2);
-        List<ChainKnotEntity> otherKnots = player.level.getEntitiesOfClass(ChainKnotEntity.class, searchBox);
+        List<ChainKnotEntity> otherKnots = player.level().getEntitiesOfClass(ChainKnotEntity.class, searchBox);
 
         List<ChainLink> attachableLinks = new ArrayList<>();
 

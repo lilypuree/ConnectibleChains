@@ -18,12 +18,12 @@ Connect chains between fences
 [[dependencies.connectiblechains]]
     modId="forge" #mandatory
     mandatory=true #mandatory
-    versionRange="[45.1,)" #mandatory
+    versionRange="[47,)" #mandatory
     ordering="NONE"
     side="BOTH"
 [[dependencies.connectiblechains]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.19.4,1.20)"
+    versionRange="[1.20.1,1.20.2)"
     ordering="NONE"
     side="BOTH"

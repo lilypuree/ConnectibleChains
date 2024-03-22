@@ -105,8 +105,8 @@ public class ChainLink {
             secondaryKnot.addLink(link);
             link.createCollision();
         }
-        if (!primary.level.isClientSide) {
-            link.sendAttachChainPacket(primary.level);
+        if (!primary.level().isClientSide) {
+            link.sendAttachChainPacket(primary.level());
         }
         return link;
     }
@@ -119,7 +119,7 @@ public class ChainLink {
      */
     private void createCollision() {
         if (!collisionStorage.isEmpty()) return;
-        if (primary.level.isClientSide) return;
+        if (primary.level().isClientSide) return;
 
         double distance = primary.distanceTo(secondary);
         // step = spacing * ?(width^2 + width^2) / distance
@@ -168,7 +168,7 @@ public class ChainLink {
      */
     @Nullable
     private Entity spawnCollision(boolean reverse, Entity start, Entity end, double v) {
-        assert primary.level instanceof ServerLevel;
+        assert primary.level() instanceof ServerLevel;
         Vec3 startPos = start.position().add(start.getLeashOffset(0));
         Vec3 endPos = end.position().add(end.getLeashOffset(0));
 
@@ -190,8 +190,8 @@ public class ChainLink {
 
         y += -ModEntityTypes.CHAIN_COLLISION.get().getHeight() + 2 / 16f;
 
-        ChainCollisionEntity c = new ChainCollisionEntity(primary.level, x, y, z, this);
-        if (primary.level.addFreshEntity(c)) {
+        ChainCollisionEntity c = new ChainCollisionEntity(primary.level(), x, y, z, this);
+        if (primary.level().addFreshEntity(c)) {
             return c;
         } else {
             ConnectibleChains.LOGGER.warn("Tried to summon collision entity for a chain, failed to do so");
@@ -273,7 +273,7 @@ public class ChainLink {
         if (!alive) return;
 
         boolean drop = mayDrop;
-        Level world = primary.level;
+        Level world = primary.level();
         this.alive = false;
 
         if (world.isClientSide) return;
@@ -304,7 +304,7 @@ public class ChainLink {
      */
     private void destroyCollision() {
         for (Integer entityId : collisionStorage) {
-            Entity e = primary.level.getEntity(entityId);
+            Entity e = primary.level().getEntity(entityId);
             if (e instanceof ChainCollisionEntity) {
                 e.remove(Entity.RemovalReason.DISCARDED);
             } else {
