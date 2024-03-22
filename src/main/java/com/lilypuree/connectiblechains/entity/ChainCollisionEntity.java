@@ -43,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
  * ChainCollisionEntity is an Entity that is invisible but has a collision.
  * It is used to create a collision for links.
  *
- * @author legoatoom, Quendolin
+ * @author legoatoom, Qendolin
  */
 public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpawnData, ChainLinkEntity {
 
