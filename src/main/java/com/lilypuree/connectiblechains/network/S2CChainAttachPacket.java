@@ -1,6 +1,5 @@
 package com.lilypuree.connectiblechains.network;
 
-import com.google.common.collect.Lists;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.client.ClientInitializer;
 import net.minecraft.network.FriendlyByteBuf;
@@ -13,8 +12,9 @@ import java.util.function.Supplier;
 public class S2CChainAttachPacket {
 
     public static ResourceLocation S2C_CHAIN_ATTACH_PACKET_ID = new ResourceLocation(ConnectibleChains.MODID, "s2c_chain_attach_packet_id");
-    private int fromId, toId;
-    private ResourceLocation chainType;
+    private final int fromId;
+    private final int toId;
+    private final ResourceLocation chainType;
 
     public S2CChainAttachPacket(int fromId, int toId, ResourceLocation chainType) {
         this.fromId = fromId;

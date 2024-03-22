@@ -19,7 +19,6 @@ package com.lilypuree.connectiblechains.client.render.entity;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.chain.ChainLink;
-import com.lilypuree.connectiblechains.chain.ChainType;
 import com.lilypuree.connectiblechains.client.ClientInitializer;
 import com.lilypuree.connectiblechains.client.render.entity.model.ChainKnotEntityModel;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
@@ -37,15 +36,16 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.List;
 
@@ -98,7 +98,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
             matrices.translate(leashOffset.x, leashOffset.y + 6.5 / 16f, leashOffset.z);
             // The model is 6 px wide, but it should be rendered at 5px
             matrices.scale(5 / 6f, 1, 5 / 6f);
-            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(chainKnotEntity.getChainType().getKnotTexture()));
+            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(getKnotTexture(chainKnotEntity.getChainItemSource())));
             this.model.renderToBuffer(matrices, vertexConsumer, light, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
             matrices.popPose();
         }
@@ -116,9 +116,9 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
             matrices.pushPose();
             // F stands for "from", T for "to"
-            Component holdingCount = new TextComponent("F: " + chainKnotEntity.getLinks().stream()
+            Component holdingCount = Component.literal("F: " + chainKnotEntity.getLinks().stream()
                     .filter(l -> l.primary == chainKnotEntity).count());
-            Component heldCount = new TextComponent("T: " + chainKnotEntity.getLinks().stream()
+            Component heldCount = Component.literal("T: " + chainKnotEntity.getLinks().stream()
                     .filter(l -> l.secondary == chainKnotEntity).count());
             matrices.translate(0, 0.25, 0);
             this.renderNameTag(chainKnotEntity, holdingCount, matrices, vertexConsumers, light);
@@ -128,6 +128,17 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         }
         super.render(chainKnotEntity, yaw, partialTicks, matrices, vertexConsumers, light);
     }
+
+    private ResourceLocation getKnotTexture(Item item) {
+        ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
+        return new ResourceLocation(id.getNamespace(), "textures/item/" + id.getPath() + ".png");
+    }
+
+    private ResourceLocation getChainTexture(Item item) {
+        ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
+        return new ResourceLocation(id.getNamespace(), "textures/block/" + id.getPath() + ".png");
+    }
+
 
     /**
      * Draws a line fromEntity - toEntity, from green to red.
@@ -176,14 +187,14 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         Vec3 leashOffset = fromEntity.getLeashOffset();
         matrices.translate(leashOffset.x, leashOffset.y, leashOffset.z);
 
-        ChainType chainType = link.chainType;
+        Item sourceItem = link.sourceItem;
         // Some further performance improvements can be made here:
         // Create a rendering layer that:
         // - does not have normals
         // - does not have an overlay
         // - does not have vertex color
         // - uses a tri strp instead of quads
-        VertexConsumer buffer = vertexConsumerProvider.getBuffer(RenderType.entityCutoutNoCull(chainType.getChainTexture()));
+        VertexConsumer buffer = vertexConsumerProvider.getBuffer(RenderType.entityCutoutNoCull(getChainTexture(sourceItem)));
         if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
             buffer = vertexConsumerProvider.getBuffer(RenderType.lines());
         }
@@ -218,7 +229,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
 
     @Override
     public ResourceLocation getTextureLocation(ChainKnotEntity pEntity) {
-        return pEntity.getChainType().getKnotTexture();
+        return getKnotTexture(pEntity.getChainItemSource());
     }
 
 }

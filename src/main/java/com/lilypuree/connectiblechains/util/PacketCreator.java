@@ -1,16 +1,12 @@
 package com.lilypuree.connectiblechains.util;
 
 import com.lilypuree.connectiblechains.chain.ChainLink;
-import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
-import com.lilypuree.connectiblechains.network.ModPacketHandler;
 import com.lilypuree.connectiblechains.network.S2CMultiChainAttachPacket;
-import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.Entity;
-import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -26,7 +22,7 @@ public class PacketCreator {
         for (ChainLink link : links) {
             if (link.primary == knot) {
                 ids.add(link.secondary.getId());
-                types.add(ChainTypesRegistry.getKey(link.chainType));
+                types.add(ForgeRegistries.ITEMS.getKey(link.sourceItem));
             }
         }
         if (ids.size() > 0) {

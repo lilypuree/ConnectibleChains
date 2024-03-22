@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class NBTUtilsMixin {
 
     @Inject(at = @At("RETURN"), method = "update(Lcom/mojang/datafixers/DataFixer;Lnet/minecraft/util/datafix/DataFixTypes;Lnet/minecraft/nbt/CompoundTag;II)Lnet/minecraft/nbt/CompoundTag;", cancellable = true)
-    private static void updateDataWithFixers(DataFixer fixer, DataFixTypes fixTypes, CompoundTag compound, int oldVersion, int targetVersion, CallbackInfoReturnable<CompoundTag> cir){
+    private static void updateDataWithFixers(DataFixer fixer, DataFixTypes fixTypes, CompoundTag compound, int oldVersion, int targetVersion, CallbackInfoReturnable<CompoundTag> cir) {
         CompoundTag original = cir.getReturnValue();
-        if (fixTypes == DataFixTypes.ENTITY_CHUNK){
+        if (fixTypes == DataFixTypes.ENTITY_CHUNK) {
             CompoundTag finalTag = ChainKnotFixer.INSTANCE.update(original);
             cir.setReturnValue(finalTag);
         }

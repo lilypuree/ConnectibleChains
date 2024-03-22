@@ -3,7 +3,6 @@ package com.lilypuree.connectiblechains.client;
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.client.render.entity.ChainCollisionEntityRenderer;
 import com.lilypuree.connectiblechains.client.render.entity.ChainKnotEntityRenderer;
-import com.lilypuree.connectiblechains.client.render.entity.ChainTextureManager;
 import com.lilypuree.connectiblechains.client.render.entity.model.ChainKnotEntityModel;
 import com.lilypuree.connectiblechains.entity.ChainCollisionEntity;
 import com.lilypuree.connectiblechains.entity.ModEntityTypes;
@@ -13,7 +12,6 @@ import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -23,7 +21,7 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 public class ClientInitializer {
     public static final ModelLayerLocation CHAIN_KNOT = new ModelLayerLocation(Helper.identifier("chain_knot"), "main");
 
-    public static final ChainTextureManager textureManager = new ChainTextureManager();
+    // public static final ChainTextureManager textureManager = new ChainTextureManager();
     protected static ChainKnotEntityRenderer chainKnotEntityRenderer;
     public static ChainPacketHandler chainPacketHandler;
 
@@ -49,11 +47,6 @@ public class ClientInitializer {
     public static void onClientConfigReload(ModConfigEvent.Reloading event) {
         if (chainKnotEntityRenderer != null)
             chainKnotEntityRenderer.getChainRenderer().purge();
-    }
-
-    @SubscribeEvent
-    public static void onRegisterReloadListener(RegisterClientReloadListenersEvent event) {
-        event.registerReloadListener(textureManager);
     }
 
     public static boolean checkCollisionEntityWithinRenderDistance(ChainCollisionEntity entity, double distance) {

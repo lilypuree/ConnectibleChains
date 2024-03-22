@@ -2,18 +2,18 @@ package com.lilypuree.connectiblechains;
 
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 
 @Mod.EventBusSubscriber(modid = ConnectibleChains.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class CCConfig {
-    private static final transient boolean IS_DEBUG_ENV = FMLEnvironment.production;
+    private static final boolean IS_DEBUG_ENV = FMLEnvironment.production;
 
     public ForgeConfigSpec.DoubleValue chainHangAmount;
     public ForgeConfigSpec.IntValue maxChainRange;
     public ForgeConfigSpec.IntValue quality;
+
+    public ForgeConfigSpec.BooleanValue showToolTip;
 
     public static ForgeConfigSpec COMMON_CONFIG;
     public static ForgeConfigSpec CLIENT_CONFIG;
@@ -42,6 +42,11 @@ public class CCConfig {
                         + "\r\n Effects the visual quality of the chain.")
                 .defineInRange("quality", 4, 1, 9);
 
+        showToolTip = CLIENT_BUILDER
+                .comment("\r\n  ToolTip\n"
+                        + "\r\n Displays a ToolTip under compatible chain items")
+                .define("showToolTip", true);
+
         COMMON_CONFIG = COMMON_BUILDER.build();
         CLIENT_CONFIG = CLIENT_BUILDER.build();
     }
@@ -56,6 +61,10 @@ public class CCConfig {
 
     public int getQuality() {
         return quality.get();
+    }
+
+    public Boolean doShowToolTip() {
+        return showToolTip.get();
     }
 
     public boolean doDebugDraw() {
