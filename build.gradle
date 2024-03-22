@@ -59,6 +59,7 @@ minecraft {
     }
 }
 
+
 repositories {
     maven {
         // location of the maven that hosts JEI files before January 2023

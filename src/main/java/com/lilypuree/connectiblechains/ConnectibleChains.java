@@ -1,9 +1,12 @@
 package com.lilypuree.connectiblechains;
 
+import com.lilypuree.connectiblechains.chain.ChainTypesRegistry;
+import com.lilypuree.connectiblechains.compat.BuiltinCompat;
 import com.lilypuree.connectiblechains.entity.ModEntityTypes;
 import com.lilypuree.connectiblechains.item.ChainItemInfo;
 import com.lilypuree.connectiblechains.network.ModPacketHandler;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -20,11 +23,15 @@ public class ConnectibleChains {
     public static CCConfig runtimeConfig;
 
     public ConnectibleChains() {
+        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+
         ModEntityTypes.register();
+        ChainTypesRegistry.init(bus);
+        BuiltinCompat.init();
+
 
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         MinecraftForge.EVENT_BUS.addListener(ChainItemInfo::chainUseEvent);
-//        MinecraftForge.EVENT_BUS.addListener(this::onBlockBreak);
 
         runtimeConfig = new CCConfig();
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, CCConfig.COMMON_CONFIG);
@@ -36,4 +43,10 @@ public class ConnectibleChains {
     }
 
 
+    /**
+     * Because of how mods work, this function is called always when a player uses right click.
+     * But if the right click doesn't involve this mod (No chain/block to connect to) then we ignore immediately.
+     * <p>
+     * If it does involve us, then we have work to do, we create connections remove items from inventory and such.
+     */
 }

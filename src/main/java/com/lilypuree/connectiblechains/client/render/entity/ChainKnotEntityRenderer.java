@@ -28,6 +28,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Matrix4f;
 import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -89,6 +90,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
     }
 
 
+
     @Override
     public void render(ChainKnotEntity chainKnotEntity, float yaw, float partialTicks, PoseStack matrices, MultiBufferSource vertexConsumers, int light) {
         // Render the knot
@@ -104,8 +106,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         }
 
         // Render the links
-        List<ChainLink> links = chainKnotEntity.getLinks();
-        for (ChainLink link : links) {
+        for (ChainLink link : chainKnotEntity.getLinks()) { //Is always 0
             if (link.primary != chainKnotEntity || link.isDead()) continue;
             this.renderChainLink(link, partialTicks, matrices, vertexConsumers);
             if (ConnectibleChains.runtimeConfig.doDebugDraw()) {

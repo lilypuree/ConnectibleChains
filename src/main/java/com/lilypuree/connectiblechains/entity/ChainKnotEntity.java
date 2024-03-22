@@ -21,6 +21,7 @@ import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.chain.ChainLink;
 import com.lilypuree.connectiblechains.datafixer.ChainKnotFixer;
 import com.lilypuree.connectiblechains.network.ModPacketHandler;
+import com.lilypuree.connectiblechains.network.S2CChainAttachPacket;
 import com.lilypuree.connectiblechains.network.S2CKnotChangeTypePacket;
 import com.lilypuree.connectiblechains.tag.CommonTags;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -89,7 +90,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * All links that involve this knot (secondary and primary)
      */
-    private final ObjectList<ChainLink> links = new ObjectArrayList<>();
+    public final ObjectList<ChainLink> links = new ObjectArrayList<>();
 
     /**
      * Links where the 'secondary' might not exist yet. Will be cleared after the grace period.
