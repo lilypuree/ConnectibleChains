@@ -12,25 +12,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.lilypuree.connectiblechains.client.render.entity;
+package com.lilypuree.connectiblechains.tag;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import com.lilypuree.connectiblechains.util.Helper;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
 
 /**
- * Specifies the uv coordinates that the renderer should use.
- * The chain texture has to be vertical for now.
- *
- * @implNote This is a leftover and serves no real function
+ * @see <a href="https://github.com/paulevsGitch/BCLib/blob/1.18.2/src/main/java/ru/bclib/api/tag/TagAPI.java">github.com/paulevsGitch/BCLib</>
  */
-@OnlyIn(Dist.CLIENT)
-public record UVRect(float x0, float x1) {
-    /**
-     * Default UV's for side A
-     */
-    public static final UVRect DEFAULT_SIDE_A = new UVRect(0, 3);
-    /**
-     * Default UV's for side B
-     */
-    public static final UVRect DEFAULT_SIDE_B = new UVRect(3, 6);
+public class ModTagRegistry {
+    public static final TagKey<Block> CHAIN_CONNECTIBLE = BlockTags.create(Helper.rl("chain_connectible"));
+    public static final TagKey<Item> CATENARY_ITEMS = ItemTags.create(Helper.rl("catenary_items"));
 }

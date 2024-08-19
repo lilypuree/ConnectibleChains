@@ -1,94 +1,26 @@
+/*
+ * Copyright (C) 2024 legoatoom.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.lilypuree.connectiblechains.client;
 
-import com.lilypuree.connectiblechains.ConnectibleChains;
-import com.lilypuree.connectiblechains.chain.ChainLink;
 import com.lilypuree.connectiblechains.chain.IncompleteChainLink;
-import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.ForgeRegistries;
+import com.lilypuree.connectiblechains.networking.packet.ChainAttachPayload;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
-import java.util.List;
-
+@OnlyIn(Dist.CLIENT)
 public class ChainPacketHandler {
-    /**
-     * Links where this is the primary and the secondary doesn't yet exist / hasn't yet loaded.
-     * They are kept in a separate list to prevent accidental accesses of the secondary which would
-     * result in a NPE. The links will try to be completed each world tick.
-     */
-    private final ObjectList<IncompleteChainLink> incompleteLinks = new ObjectArrayList<>(256);
-
-    /**
-     * Will create links from the entity with the id {@code fromId} to multiple targets.
-     *
-     * @param fromId  Primary entity id
-     * @param toIds   Secondary entity ids
-     * @param typeIds Link type raw ids
-     */
-    public void createLinks(int fromId, int[] toIds, List<ResourceLocation> typeIds) {
-        Minecraft client = Minecraft.getInstance();
-        if (client.level == null) return;
-        Entity from = client.level.getEntity(fromId);
-        if (from instanceof ChainKnotEntity knot) {
-            for (int i = 0; i < toIds.length; i++) {
-                Entity to = client.level.getEntity(toIds[i]);
-                Item chainType = ForgeRegistries.ITEMS.getValue(typeIds.get(i));
-                if (to == null) {
-                    incompleteLinks.add(new IncompleteChainLink(knot, toIds[i], chainType));
-                } else {
-                    ChainLink.create(knot, to, chainType);
-                }
-            }
-        } else {
-            logBadActionTarget("attach from", from, fromId, "chain knot");
-        }
-    }
-
-    public void removeLink(int fromId, int toId) {
-        Level level = Minecraft.getInstance().level;
-        if (level == null) return;
-        Entity from = level.getEntity(fromId);
-        Entity to = level.getEntity(toId);
-
-        if (from instanceof ChainKnotEntity knot) {
-            if (to == null) {
-                for (IncompleteChainLink link : incompleteLinks) {
-                    if (link.primary == from && link.secondaryId == toId) {
-                        link.destroy();
-                    }
-                }
-            } else {
-                for (ChainLink link : knot.getLinks()) {
-                    if (link.secondary == to) {
-                        link.destroy(true);
-                    }
-                }
-            }
-        } else {
-            logBadActionTarget("detach from", from, fromId, "chain knot");
-        }
-    }
-
-    public void changeKnotType(int knotId, ResourceLocation typeId) {
-        Entity entity = Minecraft.getInstance().level.getEntity(knotId);
-        Item chainType = ForgeRegistries.ITEMS.getValue(typeId);
-        if (entity instanceof ChainKnotEntity knot) {
-            knot.updateChainType(chainType);
-        } else {
-            logBadActionTarget("change type of", entity, knotId, "chain knot");
-        }
-    }
-
-    private void logBadActionTarget(String action, Entity target, int targetId, String expectedTarget) {
-        ConnectibleChains.LOGGER.error(String.format("Tried to %s %s (#%d) which is not %s",
-                action, target, targetId, expectedTarget
-        ));
-    }
 
     /**
      * Called on every client tick.
@@ -96,6 +28,6 @@ public class ChainPacketHandler {
      * Completed links or links that are no longer valid because the primary is dead are removed.
      */
     public void tick() {
-        incompleteLinks.removeIf(IncompleteChainLink::tryCompleteOrRemove);
+        ChainAttachPayload.incompleteLinks.removeIf(IncompleteChainLink::tryCompleteOrRemove);
     }
 }

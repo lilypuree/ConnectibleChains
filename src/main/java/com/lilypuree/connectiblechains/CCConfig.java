@@ -1,26 +1,25 @@
 package com.lilypuree.connectiblechains;
 
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
-@Mod.EventBusSubscriber(modid = ConnectibleChains.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class CCConfig {
     private static final boolean IS_DEBUG_ENV = FMLEnvironment.production;
 
-    public ForgeConfigSpec.DoubleValue chainHangAmount;
-    public ForgeConfigSpec.IntValue maxChainRange;
-    public ForgeConfigSpec.IntValue quality;
+    public ModConfigSpec.DoubleValue chainHangAmount;
+    public ModConfigSpec.IntValue maxChainRange;
+    public ModConfigSpec.IntValue quality;
 
-    public ForgeConfigSpec.BooleanValue showToolTip;
+    public ModConfigSpec.BooleanValue showToolTip;
 
-    public static ForgeConfigSpec COMMON_CONFIG;
-    public static ForgeConfigSpec CLIENT_CONFIG;
+    public static ModConfigSpec COMMON_CONFIG;
+    public static ModConfigSpec CLIENT_CONFIG;
 
     public CCConfig() {
-        ForgeConfigSpec.Builder COMMON_BUILDER = new ForgeConfigSpec.Builder();
-        ForgeConfigSpec.Builder CLIENT_BUILDER = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder COMMON_BUILDER = new ModConfigSpec.Builder();
+        ModConfigSpec.Builder CLIENT_BUILDER = new ModConfigSpec.Builder();
         COMMON_BUILDER.comment("Connectible Chains Config\n\n");
 
         chainHangAmount = COMMON_BUILDER
@@ -68,6 +67,6 @@ public class CCConfig {
     }
 
     public boolean doDebugDraw() {
-        return IS_DEBUG_ENV && Minecraft.getInstance().options.renderDebug;
+        return IS_DEBUG_ENV && Minecraft.getInstance().getDebugOverlay().showDebugScreen();
     }
 }

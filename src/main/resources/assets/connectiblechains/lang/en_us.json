@@ -1,8 +1,20 @@
 {
-  "entity.connectiblechains.chain_knot": "Chain Knot",
-  "entity.connectiblechains.chain_collision": "Chain Collision",
+  "entity.connectiblechains.chain_knot" : "Chain Knot",
+  "message.connectiblechains.connectible_chain" : "Catenary Compatible [Shift]",
+  "message.connectiblechains.connectible_chain_detailed" : "Click on fences/walls to create a catenary!",
+  "entity.connectiblechains.chain_collision" : "Chain Collision",
+  "connectiblechains.configuration.chainHangAmount" : "Chain Drip",
+  "connectiblechains.configuration.maxChainRange" : "Max Chain Distance",
+  "connectiblechains.configuration.quality" : "Chain Quality",
+  "connectiblechains.configuration.chainHangAmount.@Tooltip[0]" : "Effects how much the chain hangs.",
+  "connectiblechains.configuration.chainHangAmount.@Tooltip[1]" : "Lower numbers equals more a bigger curve.",
+  "connectiblechains.configuration.chainHangAmount.@Tooltip[2]" : "Collision will update on new chains or world loading.",
+  "connectiblechains.configuration.showToolTip" : "Show Catenary Compatibility Tooltip",
+  "connectiblechains.configuration.showToolTip.@Tooltip" : "Show tooltip over chain items that are compatible with this mod.",
 
-
-  "message.connectiblechains.connectible_chain": "Catenary Compatible [Shift]",
-  "message.connectiblechains.connectible_chain_detailed": "Click on fences/walls to create a catenary!"
+  "connectiblechains.configuration.maxChainRange.@Tooltip[0]" : "Effects how long a chain can be.",
+  "connectiblechains.configuration.maxChainRange.@Tooltip[1]" : "§nWarning§r: Long chains can sometimes become invisible!",
+  "connectiblechains.configuration.quality.@Tooltip" : "Effects the visual quality the chain.",
+  "connectiblechains.title": "Connectible Chains Configs",
+  "tag.item.connectiblechains.catenary_items": "Catenary items"
 }

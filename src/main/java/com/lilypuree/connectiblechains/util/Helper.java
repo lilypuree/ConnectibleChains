@@ -1,14 +1,28 @@
+/*
+ * Copyright (C) 2024 legoatoom.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.lilypuree.connectiblechains.util;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 public class Helper {
-    public static ResourceLocation identifier(String name) {
-        return new ResourceLocation(ConnectibleChains.MODID, name);
+
+    public static ResourceLocation rl(String name) {
+        return ResourceLocation.fromNamespaceAndPath(ConnectibleChains.MODID, name);
     }
 
     @Deprecated
@@ -35,9 +49,14 @@ public class Helper {
      */
     public static double drip2(double x, double d, double h) {
         double a = ConnectibleChains.runtimeConfig.getChainHangAmount();
+        a = a + (d * 0.3);
         double p1 = a * asinh((h / (2D * a)) * (1D / Math.sinh(d / (2D * a))));
         double p2 = -a * Math.cosh((2D * p1 - d) / (2D * a));
         return p2 + a * Math.cosh((((2D * x) + (2D * p1)) - d) / (2D * a));
+    }
+
+    private static double asinh(double x) {
+        return Math.log(x + Math.sqrt(x * x + 1.0));
     }
 
     /**
@@ -56,29 +75,11 @@ public class Helper {
         return Math.sinh((2 * x + 2 * p1 - d) / (2 * a));
     }
 
-    private static double asinh(double x) {
-        return Math.log(x + Math.sqrt(x * x + 1.0));
-    }
-
     public static Vec3 middleOf(Vec3 a, Vec3 b) {
         double x = (a.x() - b.x()) / 2d + b.x();
         double y = (a.y() - b.y()) / 2d + b.y();
         double z = (a.z() - b.z()) / 2d + b.z();
         return new Vec3(x, y, z);
-    }
-
-    public static float distanceBetween(Vector3f a, Vector3f b) {
-        float dx = a.x() - b.x();
-        float dy = a.y() - b.y();
-        float dz = a.z() - b.z();
-        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-
-    public static float lengthOf(Vector3f v) {
-        float x = v.x();
-        float y = v.y();
-        float z = v.z();
-        return (float) Math.sqrt(x * x + y * y + z * z);
     }
 
     /**
@@ -88,11 +89,11 @@ public class Helper {
      * @param end   fence pos
      * @return the x/z offset
      */
-    public static Vector3f getChainOffset(Vec3 start, Vec3 end) {
+    public static Vec3 getChainOffset(Vec3 start, Vec3 end) {
         Vector3f offset = end.subtract(start).toVector3f();
         offset.set(offset.x(), 0, offset.z());
         offset.normalize();
         offset.normalize(2 / 16f);
-        return offset;
+        return new Vec3(offset);
     }
 }

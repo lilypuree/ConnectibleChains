@@ -1,8 +1,24 @@
+/*
+ * Copyright (C) 2024 legoatoom.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.lilypuree.connectiblechains.chain;
 
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 /**
  * Due to the asynchronous nature of networking an attach- or detach-packet cann arrive before the secondary exists.
@@ -10,6 +26,7 @@ import net.minecraft.world.item.Item;
  *
  * @author Qendolin
  */
+@OnlyIn(Dist.CLIENT)
 public class IncompleteChainLink {
     /**
      * @see ChainLink#primary
@@ -19,7 +36,6 @@ public class IncompleteChainLink {
      * @see ChainLink#primary
      */
     public final int secondaryId;
-
 
     public final Item sourceItem;
     /**

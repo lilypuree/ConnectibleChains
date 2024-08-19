@@ -1,12 +1,12 @@
 modLoader="javafml" #mandatory
 # A version range to match for said mod loader - for regular FML @Mod it will be the forge version
-loaderVersion="[45,)" #mandatory (28 is current forge version)
+loaderVersion="[4,)" #mandatory (28 is current forge version)
 
 license="GNU Lesser General Public License v3.0"
 
 [[mods]] #mandatory
 modId="connectiblechains" #mandatory
-version="${file.jarVersion}" #mandatory
+version="${mod_version}" #mandatory
 displayName="Connectible Chains" #mandatory
 logoFile="icon.png" #optional
 credits="Legoatoom for creating the original fabric mod" #optional
@@ -16,14 +16,14 @@ Connect chains between fences
 '''
 
 [[dependencies.connectiblechains]]
-    modId="forge" #mandatory
+    modId="neoforge" #mandatory
     mandatory=true #mandatory
-    versionRange="[47,)" #mandatory
+    versionRange="[21.0.0,)" #mandatory
     ordering="NONE"
     side="BOTH"
 [[dependencies.connectiblechains]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.20.1,1.20.2)"
+    versionRange="[1.21,1.21.1)"
     ordering="NONE"
     side="BOTH"

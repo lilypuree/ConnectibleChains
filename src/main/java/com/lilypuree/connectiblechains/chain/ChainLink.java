@@ -1,39 +1,46 @@
+/*
+ * Copyright (C) 2024 legoatoom.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.lilypuree.connectiblechains.chain;
 
 import com.lilypuree.connectiblechains.ConnectibleChains;
 import com.lilypuree.connectiblechains.entity.ChainCollisionEntity;
 import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import com.lilypuree.connectiblechains.entity.ModEntityTypes;
-import com.lilypuree.connectiblechains.network.ModPacketHandler;
-import com.lilypuree.connectiblechains.network.S2CChainAttachPacket;
-import com.lilypuree.connectiblechains.network.S2CChainDetachPacket;
+import com.lilypuree.connectiblechains.networking.packet.ChainAttachPayload;
 import com.lilypuree.connectiblechains.util.Helper;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import net.minecraft.core.Vec3i;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.LeadItem;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3d;
-import org.joml.Vector3f;
 
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * A logical representation of the link between a knot and another entity.
@@ -47,16 +54,17 @@ public class ChainLink {
      * A value of 1 means they are "shoulder to shoulder"
      */
     private static final float COLLIDER_SPACING = 1.5f;
+
     /**
      * The de facto owner of this link. It is responsive for managing the link and keeping track of it across saves.
      */
     @NotNull
-    public final ChainKnotEntity primary;
+    private final ChainKnotEntity primary;
     /**
      * The de facto target of this link. Mostly used to calculate positions.
      */
     @NotNull
-    public final Entity secondary;
+    private final Entity secondary;
     /**
      * The type of the link
      */
@@ -105,12 +113,11 @@ public class ChainLink {
             secondaryKnot.addLink(link);
             link.createCollision();
         }
-        if (!primary.level().isClientSide) {
+        if (!primary.level().isClientSide()) {
             link.sendAttachChainPacket(primary.level());
         }
         return link;
     }
-
 
     /**
      * Create a collision between this and an entity.
@@ -119,43 +126,37 @@ public class ChainLink {
      */
     private void createCollision() {
         if (!collisionStorage.isEmpty()) return;
-        if (primary.level().isClientSide) return;
+        if (getPrimary().level().isClientSide()) return;
 
-        double distance = primary.distanceTo(secondary);
-        // step = spacing * ?(width^2 + width^2) / distance
+        double distance = getPrimary().distanceTo(getSecondary());
+        // step = spacing * √(width^2 + width^2) / distance
         double step = COLLIDER_SPACING * Math.sqrt(Math.pow(ModEntityTypes.CHAIN_COLLISION.get().getWidth(), 2) * 2) / distance;
         double v = step;
         // reserve space for the center collider
         double centerHoldout = ModEntityTypes.CHAIN_COLLISION.get().getWidth() / distance;
 
         while (v < 0.5 - centerHoldout) {
-            Entity collider1 = spawnCollision(false, primary, secondary, v);
+            Entity collider1 = spawnCollision(false, getPrimary(), getSecondary(), v);
             if (collider1 != null) collisionStorage.add(collider1.getId());
-            Entity collider2 = spawnCollision(true, primary, secondary, v);
+            Entity collider2 = spawnCollision(true, getPrimary(), getSecondary(), v);
             if (collider2 != null) collisionStorage.add(collider2.getId());
 
             v += step;
         }
 
-        Entity centerCollider = spawnCollision(false, primary, secondary, 0.5);
+        Entity centerCollider = spawnCollision(false, getPrimary(), getSecondary(), 0.5);
         if (centerCollider != null) collisionStorage.add(centerCollider.getId());
     }
 
     /**
      * Send a package to all the clients around this entity that notifies them of this link's creation.
      */
-    private void sendAttachChainPacket(Level world) {
-        assert world instanceof ServerLevel;
+    private void sendAttachChainPacket(Level level) {
+        assert level instanceof ServerLevel;
 
-        Set<ServerPlayer> trackingPlayers = getTrackingPlayers(world);
-
-        S2CChainAttachPacket packet = new S2CChainAttachPacket(primary.getId(), secondary.getId(), ForgeRegistries.ITEMS.getKey(sourceItem));
-
-        for (ServerPlayer player : trackingPlayers) {
-            ModPacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet);
-        }
+        PacketDistributor.sendToPlayersTrackingEntity(this.primary, new ChainAttachPayload(this, true));
+        PacketDistributor.sendToPlayersTrackingEntity(this.secondary, new ChainAttachPayload(this, true));
     }
-
 
     /**
      * Spawns a collider at {@code v} percent between {@code start} and {@code end}
@@ -168,7 +169,7 @@ public class ChainLink {
      */
     @Nullable
     private Entity spawnCollision(boolean reverse, Entity start, Entity end, double v) {
-        assert primary.level() instanceof ServerLevel;
+        assert getPrimary().level() instanceof ServerLevel;
         Vec3 startPos = start.position().add(start.getLeashOffset(0));
         Vec3 endPos = end.position().add(end.getLeashOffset(0));
 
@@ -178,7 +179,8 @@ public class ChainLink {
             startPos = tmp;
         }
 
-        Vector3f offset = Helper.getChainOffset(startPos, endPos);
+
+        Vec3 offset = Helper.getChainOffset(startPos, endPos);
         startPos = startPos.add(offset.x(), 0, offset.z());
         endPos = endPos.add(-offset.x(), 0, -offset.z());
 
@@ -190,36 +192,13 @@ public class ChainLink {
 
         y += -ModEntityTypes.CHAIN_COLLISION.get().getHeight() + 2 / 16f;
 
-        ChainCollisionEntity c = new ChainCollisionEntity(primary.level(), x, y, z, this);
-        if (primary.level().addFreshEntity(c)) {
+        ChainCollisionEntity c = new ChainCollisionEntity(getPrimary().level(), x, y, z, this);
+        if (getPrimary().level().addFreshEntity(c)) {
             return c;
         } else {
             ConnectibleChains.LOGGER.warn("Tried to summon collision entity for a chain, failed to do so");
             return null;
         }
-    }
-
-    /**
-     * Finds all players that are in {@code world} and tracking either the primary or secondary.
-     *
-     * @param world the world to search in
-     * @return A set of all players that track the primary or secondary.
-     */
-    private Set<ServerPlayer> getTrackingPlayers(Level world) {
-        assert world instanceof ServerLevel;
-        Set<ServerPlayer> trackingPlayers = new HashSet<>(
-                around((ServerLevel) world, primary.blockPosition(), ChainKnotEntity.VISIBLE_RANGE));
-        trackingPlayers.addAll(
-                around((ServerLevel) world, secondary.blockPosition(), ChainKnotEntity.VISIBLE_RANGE));
-        return trackingPlayers;
-    }
-
-    private Collection<ServerPlayer> around(ServerLevel level, Vec3i pos, double radius) {
-        double radiusSq = radius * radius;
-        Objects.requireNonNull(level, "The world cannot be null");
-
-        return level.players().stream().filter(p -> p.distanceToSqr(pos.getX(), pos.getY(), pos.getZ()) <= radiusSq)
-                .collect(Collectors.toList());
     }
 
     public boolean isDead() {
@@ -230,7 +209,7 @@ public class ChainLink {
      * Returns the squared distance between the primary and secondary.
      */
     public double getSquaredDistance() {
-        return this.primary.distanceToSqr(secondary);
+        return this.getPrimary().distanceToSqr(getSecondary());
     }
 
     /**
@@ -243,14 +222,14 @@ public class ChainLink {
         if (o == null || getClass() != o.getClass()) return false;
         ChainLink link = (ChainLink) o;
 
-        boolean partnersEqual = primary.equals(link.primary) && secondary.equals(link.secondary) ||
-                primary.equals(link.secondary) && secondary.equals(link.primary);
+        boolean partnersEqual = getPrimary().equals(link.getPrimary()) && getSecondary().equals(link.getSecondary()) ||
+                getPrimary().equals(link.getSecondary()) && getSecondary().equals(link.getPrimary());
         return alive == link.alive && partnersEqual;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(primary, secondary, alive);
+        return Objects.hash(getPrimary(), getSecondary(), alive);
     }
 
     /**
@@ -260,7 +239,7 @@ public class ChainLink {
      * @return true when {@link #destroy(boolean)} needs to be called
      */
     public boolean needsBeDestroyed() {
-        return primary.isRemoved() || secondary.isRemoved();
+        return getPrimary().isRemoved() || getSecondary().isRemoved();
     }
 
     /**
@@ -273,30 +252,33 @@ public class ChainLink {
         if (!alive) return;
 
         boolean drop = mayDrop;
-        Level world = primary.level();
+        Level level = getPrimary().level();
         this.alive = false;
 
-        if (world.isClientSide) return;
+        if (level.isClientSide()) {
+            return;
+        }
 
-        if (secondary instanceof Player player && player.isCreative()) drop = false;
+        if (getSecondary() instanceof Player player && player.isCreative()) drop = false;
         // I think DO_TILE_DROPS makes more sense than DO_ENTITY_DROPS in this case
-        if (!world.getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS)) drop = false;
+        if (!level.getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) drop = false;
 
         if (drop) {
-            ItemStack stack = new ItemStack(sourceItem);
-            if (secondary instanceof Player player) {
+            ItemStack stack = new ItemStack(getSourceItem());
+            if (getSecondary() instanceof Player player) {
                 player.addItem(stack);
             } else {
-                Vec3 middle = Helper.middleOf(primary.position(), secondary.position());
-                ItemEntity itemEntity = new ItemEntity(world, middle.x, middle.y, middle.z, stack);
+                Vec3 middle = Helper.middleOf(getPrimary().position(), getSecondary().position());
+                ItemEntity itemEntity = new ItemEntity(level, middle.x, middle.y, middle.z, stack);
                 itemEntity.setDefaultPickUpDelay();
-                world.addFreshEntity(itemEntity);
+                level.addFreshEntity(itemEntity);
             }
         }
 
         destroyCollision();
-        if (!primary.isRemoved() && !secondary.isRemoved())
-            sendDetachChainPacket(world);
+        if (!primary.isRemoved() && !secondary.isRemoved()) {
+            sendDetachChainPacket(level);
+        }
     }
 
     /**
@@ -304,7 +286,7 @@ public class ChainLink {
      */
     private void destroyCollision() {
         for (Integer entityId : collisionStorage) {
-            Entity e = primary.level().getEntity(entityId);
+            Entity e = getPrimary().level().getEntity(entityId);
             if (e instanceof ChainCollisionEntity) {
                 e.remove(Entity.RemovalReason.DISCARDED);
             } else {
@@ -317,16 +299,54 @@ public class ChainLink {
     /**
      * Send a package to all the clients around this entity that notifies them of this link's destruction.
      */
-    private void sendDetachChainPacket(Level world) {
-        assert world instanceof ServerLevel;
+    private void sendDetachChainPacket(Level level) {
+        assert level instanceof ServerLevel;
 
-        Set<ServerPlayer> trackingPlayers = getTrackingPlayers(world);
+        PacketDistributor.sendToPlayersTrackingEntity(primary, new ChainAttachPayload(this, false));
+        PacketDistributor.sendToPlayersTrackingEntity(secondary, new ChainAttachPayload(this, false));
+    }
 
-        // Write both ids so that the client can identify the link
-        S2CChainDetachPacket packet = new S2CChainDetachPacket(primary.getId(), secondary.getId());
-
-        for (ServerPlayer player : trackingPlayers) {
-            ModPacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    /**
+     * Get the sound used for the source item, this way the sound is consistent.
+     */
+    public static SoundType getSoundGroup(@Nullable Item sourceItem) {
+        if (sourceItem instanceof BlockItem blockItem) {
+            return blockItem.getBlock().defaultBlockState().getSoundType();
         }
+        if (sourceItem instanceof LeadItem) {
+            return new SoundType(1.0f,
+                    1.0f,
+                    SoundEvents.LEASH_KNOT_BREAK,
+                    SoundType.WOOL.getStepSound(),
+                    SoundEvents.LEASH_KNOT_PLACE,
+                    SoundType.WOOL.getHitSound(),
+                    SoundType.WOOL.getFallSound()
+            );
+        }
+        return SoundType.CHAIN;
+    }
+
+    /**
+     * The de facto owner of this link. It is responsive for managing the link and keeping track of it across saves.
+     */
+    @NotNull
+    public ChainKnotEntity getPrimary() {
+        return primary;
+    }
+
+    /**
+     * The de facto target of this link. Mostly used to calculate positions.
+     */
+    @NotNull
+    public Entity getSecondary() {
+        return secondary;
+    }
+
+    /**
+     * The type of the link
+     */
+    @NotNull
+    public Item getSourceItem() {
+        return sourceItem;
     }
 }
