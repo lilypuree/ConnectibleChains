@@ -9,6 +9,390 @@
     {
       "id": "forbidden_arcanus:deorum_chain",
       "required": false
+    },
+    {
+      "id": "additionallanterns:amethyst_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:andesite_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:basalt_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:blackstone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:bone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:bricks_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:cobblestone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:cobbled_deepslate_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:copper_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:crimson_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:dark_prismarine_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:deepslate_bricks_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:diamond_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:diorite_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:emerald_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:end_stone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:exposed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:gold_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:granite_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:mossy_cobblestone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:netherite_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:normal_nether_bricks_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:normal_sandstone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:obsidian_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:oxidized_copper_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:prismarine_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:purpur_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:quartz_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:red_nether_bricks_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:red_sandstone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:smooth_stone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:stone_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:stone_bricks_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:warped_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:waxed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:waxed_exposed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:waxed_oxidized_copper_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:waxed_weathered_copper_chain",
+      "required": false
+    },
+    {
+      "id": "additionallanterns:weathered_copper_chain",
+      "required": false
+    },
+    {
+      "id": "blocksplus:copper_chain",
+      "required": false
+    },
+    {
+      "id": "blocksplus:gold_chain",
+      "required": false
+    },
+    {
+      "id": "blocksplus:emerald_chain",
+      "required": false
+    },
+    {
+      "id": "blocksplus:diamond_chain",
+      "required": false
+    },
+    {
+      "id": "blocksplus:netherite_chain",
+      "required": false
+    },
+    {
+      "id": "cyclic:gold_chain",
+      "required": false
+    },
+    {
+      "id": "cyclic:copper_chain",
+      "required": false
+    },
+    {
+      "id": "cyclic:netherite_chain",
+      "required": false
+    },
+    {
+      "id": "eternal_tales:double_chain",
+      "required": false
+    },
+    {
+      "id": "eternal_tales:gold_chain",
+      "required": false
+    },
+    {
+      "id": "eternal_tales:double_gold_chain",
+      "required": false
+    },
+    {
+      "id": "eternal_tales:unahzaal_chain",
+      "required": false
+    },
+    {
+      "id": "eternal_tales:double_unahzaal_chain",
+      "required": false
+    },
+    {
+      "id": "fantasyfurniture:decorations/bronze_chain",
+      "required": false
+    },
+    {
+      "id": "landsoficaria:vanadiumsteel_chain",
+      "required": false
+    },
+    {
+      "id": "mcwlights:golden_chain",
+      "required": false
+    },
+    {
+      "id": "mcwlights:copper_chain",
+      "required": false
+    },
+    {
+      "id": "ms:chain/gold_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:gold_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:copper_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:exposed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:weathered_copper_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:oxidized_copper_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:waxed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:waxed_exposed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:waxed_weathered_copper_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:waxed_oxidized_copper_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:netherite_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:rose_gold_chain",
+      "required": false
+    },
+    {
+      "id": "not_lazy_chainmail:iron_composite_chain",
+      "required": false
+    },
+    {
+      "id": "pfm:iron_chain",
+      "required": false
+    },
+    {
+      "id": "aether_redux:sentrite_chain",
+      "required": false
+    },
+    {
+      "id": "betterend:thallasium_chain",
+      "required": false
+    },
+    {
+      "id": "betterend:terminite_chain",
+      "required": false
+    },
+    {
+      "id": "betternether:cincinnasite",
+      "required": false
+    },
+    {
+      "id": "blockus:golden_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:silver_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:golden_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:exposed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:weathered_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:oxidized_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:waxed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:waxed_exposed_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:waxed_weathered_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:waxed_oxidized_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:large_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:large_silver_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:large_golden_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:large_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:exposed_large_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:weathered_large_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:oxidized_large_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:waxed_large_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:waxed_exposed_large_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:waxed_weathered_large_copper_chain",
+      "required": false
+    },
+    {
+      "id": "clutter:waxed_oxidized_large_copper_chain",
+      "required": false
     }
   ]
 }
