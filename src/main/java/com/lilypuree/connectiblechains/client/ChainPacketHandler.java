@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.List;
@@ -78,7 +79,7 @@ public class ChainPacketHandler {
         Entity entity = Minecraft.getInstance().level.getEntity(knotId);
         Item chainType = ForgeRegistries.ITEMS.getValue(typeId);
         if (entity instanceof ChainKnotEntity knot) {
-            knot.updateChainType(chainType);
+            knot.updateChainType(Block.byItem(chainType));
         } else {
             logBadActionTarget("change type of", entity, knotId, "chain knot");
         }

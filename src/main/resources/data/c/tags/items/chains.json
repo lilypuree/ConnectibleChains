@@ -199,30 +199,6 @@
       "required": false
     },
     {
-      "id": "eternal_tales:double_chain",
-      "required": false
-    },
-    {
-      "id": "eternal_tales:gold_chain",
-      "required": false
-    },
-    {
-      "id": "eternal_tales:double_gold_chain",
-      "required": false
-    },
-    {
-      "id": "eternal_tales:unahzaal_chain",
-      "required": false
-    },
-    {
-      "id": "eternal_tales:double_unahzaal_chain",
-      "required": false
-    },
-    {
-      "id": "fantasyfurniture:decorations/bronze_chain",
-      "required": false
-    },
-    {
       "id": "landsoficaria:vanadiumsteel_chain",
       "required": false
     },

@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -86,7 +87,7 @@ public class ChainItemInfo {
             knotType = attachableChains.get(0).sourceItem;
 
         // 3. Create new knot if none exists and delegate interaction
-        knot = new ChainKnotEntity(world, blockPos, knotType);
+        knot = new ChainKnotEntity(world, blockPos, Block.byItem(knotType));
         knot.setGraceTicks((byte) 0);
         world.addFreshEntity(knot);
 //        knot.onPlace();

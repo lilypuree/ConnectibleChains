@@ -51,6 +51,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
@@ -106,7 +108,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     /**
      * The chain type, used for rendering
      */
-    private Item chainItemSource = Items.CHAIN;
+    private Block chainItemSource = Blocks.CHAIN;
 
     /**
      * Remaining grace ticks, will be set to 0 when the last incomplete link is removed.
@@ -122,7 +124,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         super(entityType, level);
     }
 
-    public ChainKnotEntity(Level world, BlockPos pos, Item source) {
+    public ChainKnotEntity(Level world, BlockPos pos, Block source) {
         super(ModEntityTypes.CHAIN_KNOT.get(), world, pos);
         this.setPos((double) pos.getX() + 0.5D, (double) pos.getY() + 0.5D, (double) pos.getZ() + 0.5D);
         this.chainItemSource = source;
@@ -138,11 +140,11 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         super.setPos((double) Mth.floor(x) + 0.5D, (double) Mth.floor(y) + 0.5D, (double) Mth.floor(z) + 0.5D);
     }
 
-    public Item getChainItemSource() {
+    public Block getChainItemSource() {
         return chainItemSource;
     }
 
-    public void setChainItemSource(Item chainItemSource) {
+    public void setChainItemSource(Block chainItemSource) {
         this.chainItemSource = chainItemSource;
     }
 
@@ -451,7 +453,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
     @Override
     public void addAdditionalSaveData(CompoundTag root) {
         ChainKnotFixer.INSTANCE.addVersionTag(root);
-        root.putString(SOURCE_ITEM_KEY, ForgeRegistries.ITEMS.getKey(chainItemSource).toString());
+        root.putString(SOURCE_ITEM_KEY, ForgeRegistries.BLOCKS.getKey(chainItemSource).toString());
         ListTag linksTag = new ListTag();
 
         // Write complete links
@@ -497,7 +499,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
         if (root.contains("Chains")) {
             incompleteLinks.addAll(root.getList("Chains", Tag.TAG_COMPOUND));
         }
-        chainItemSource = ForgeRegistries.ITEMS.getValue(ResourceLocation.tryParse(root.getString(SOURCE_ITEM_KEY)));
+        chainItemSource = ForgeRegistries.BLOCKS.getValue(ResourceLocation.tryParse(root.getString(SOURCE_ITEM_KEY)));
     }
 
     @Override
@@ -594,7 +596,7 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
                 player.getItemInHand(hand).shrink(1);
             }
             // Allow changing the chainType of the knot
-            updateChainType(handStack.getItem());
+            updateChainType(Block.byItem(handStack.getItem()));
 
             return InteractionResult.CONSUME;
         }
@@ -645,11 +647,11 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
      *
      * @param sourceItem The new chain type.
      */
-    public void updateChainType(Item sourceItem) {
+    public void updateChainType(Block sourceItem) {
         this.chainItemSource = sourceItem;
 
         if (!level().isClientSide) {
-            S2CKnotChangeTypePacket packet = new S2CKnotChangeTypePacket(getId(), ForgeRegistries.ITEMS.getKey(sourceItem));
+            S2CKnotChangeTypePacket packet = new S2CKnotChangeTypePacket(getId(), ForgeRegistries.BLOCKS.getKey(sourceItem));
             BlockPos pos = blockPosition();
             ModPacketHandler.INSTANCE.send(PacketDistributor.NEAR
                             .with(PacketDistributor.TargetPoint.p(pos.getX(), pos.getY(), pos.getZ(), ChainKnotEntity.VISIBLE_RANGE, level().dimension())),
@@ -702,13 +704,13 @@ public class ChainKnotEntity extends HangingEntity implements IEntityAdditionalS
 
     @Override
     public void writeSpawnData(FriendlyByteBuf buffer) {
-        buffer.writeResourceLocation(ForgeRegistries.ITEMS.getKey(chainItemSource));
+        buffer.writeResourceLocation(ForgeRegistries.BLOCKS.getKey(chainItemSource));
     }
 
     @Override
     public void readSpawnData(FriendlyByteBuf additionalData) {
         ResourceLocation chainTypeID = additionalData.readResourceLocation();
-        this.setChainItemSource(ForgeRegistries.ITEMS.getValue(chainTypeID));
+        this.setChainItemSource(ForgeRegistries.BLOCKS.getValue(chainTypeID));
         this.setGraceTicks((byte) 0);
     }
 

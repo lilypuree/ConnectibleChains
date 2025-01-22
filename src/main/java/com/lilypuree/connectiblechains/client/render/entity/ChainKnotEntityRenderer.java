@@ -25,20 +25,25 @@ import com.lilypuree.connectiblechains.entity.ChainKnotEntity;
 import com.lilypuree.connectiblechains.util.Helper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -48,6 +53,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * <p>This class renders the chain you see in game. The block around the fence and the chain.
@@ -129,14 +135,18 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         super.render(chainKnotEntity, yaw, partialTicks, matrices, vertexConsumers, light);
     }
 
-    private ResourceLocation getKnotTexture(Item item) {
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
-        return new ResourceLocation(id.getNamespace(), "textures/item/" + id.getPath() + ".png");
+    private ResourceLocation getKnotTexture(Block block) {
+        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(block);
+        BlockRenderDispatcher blockRender = Minecraft.getInstance().getBlockRenderer();
+        var bakedModel = blockRender.getBlockModel(block.defaultBlockState());
+        return new ResourceLocation(id.getNamespace(), "textures/" + bakedModel.getParticleIcon().contents().name().getPath() + ".png");
     }
 
-    private ResourceLocation getChainTexture(Item item) {
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
-        return new ResourceLocation(id.getNamespace(), "textures/block/" + id.getPath() + ".png");
+    private ResourceLocation getChainTexture(Block block) {
+        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(block);
+        BlockRenderDispatcher blockRender = Minecraft.getInstance().getBlockRenderer();
+        var bakedModel = blockRender.getBlockModel(block.defaultBlockState());
+        return new ResourceLocation(id.getNamespace(), "textures/" + bakedModel.getParticleIcon().contents().name().getPath() + ".png");
     }
 
 
@@ -194,7 +204,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         // - does not have an overlay
         // - does not have vertex color
         // - uses a tri strp instead of quads
-        VertexConsumer buffer = vertexConsumerProvider.getBuffer(RenderType.entityCutoutNoCull(getChainTexture(sourceItem)));
+        VertexConsumer buffer = vertexConsumerProvider.getBuffer(RenderType.entityCutoutNoCull(getChainTexture(Block.byItem(sourceItem))));
         if (ConnectibleChains.runtimeConfig.doDebugDraw()) {
             buffer = vertexConsumerProvider.getBuffer(RenderType.lines());
         }
