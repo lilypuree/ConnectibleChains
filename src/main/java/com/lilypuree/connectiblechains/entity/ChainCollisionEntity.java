@@ -34,6 +34,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.entity.IEntityAdditionalSpawnData;
 import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -105,6 +107,7 @@ public class ChainCollisionEntity extends Entity implements IEntityAdditionalSpa
 
 
     @Override
+    @OnlyIn(Dist.CLIENT)
     public boolean shouldRenderAtSqrDistance(double pDistance) {
         if (ClientInitializer.checkCollisionEntityWithinRenderDistance(this, pDistance)) {
             return super.shouldRenderAtSqrDistance(pDistance);

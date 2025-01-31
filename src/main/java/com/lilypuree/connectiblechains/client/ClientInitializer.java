@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -49,6 +50,7 @@ public class ClientInitializer {
             chainKnotEntityRenderer.getChainRenderer().purge();
     }
 
+    @OnlyIn(Dist.CLIENT)
     public static boolean checkCollisionEntityWithinRenderDistance(ChainCollisionEntity entity, double distance) {
         LocalPlayer player = Minecraft.getInstance().player;
         return player != null && player.isHolding(item -> item.is(Tags.Items.SHEARS));
