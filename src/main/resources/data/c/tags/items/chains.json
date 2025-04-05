@@ -369,6 +369,14 @@
     {
       "id": "clutter:waxed_oxidized_large_copper_chain",
       "required": false
+    },
+    {
+      "id": "abyssal_decor:seabrass_chain",
+      "required": false
+    },
+    {
+      "id": "abyssal_decor:deepbronze_chain",
+      "required": false
     }
   ]
 }
